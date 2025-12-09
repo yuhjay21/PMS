@@ -1,0 +1,168 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+SECRET_KEY = os.getenv("SECRET_KEY", "replace-me")
+
+DEBUG = False   # Overwritten in dev.py
+
+ALLOWED_HOSTS = ["*"]
+
+# -----------------------------------------------------------------------------
+# Applications
+# -----------------------------------------------------------------------------
+
+INSTALLED_APPS = [
+    # Django Core
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "django.contrib.humanize",
+
+    # Third-party
+    "rest_framework",
+    "rest_framework.authtoken",
+    "corsheaders",
+    "django_extensions",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
+    
+    # AllAuth / Social Login
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    #"allauth.socialaccount.providers.facebook",
+    #"allauth.socialaccount.providers.google",
+    #"allauth.socialaccount.providers.twitter",
+
+    # Local apps
+    "apps.home",
+    "apps.dashboard",
+    "apps.riskprofile",
+    "apps.users",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+# -----------------------------------------------------------------------------
+# Database (PostgreSQL by default)
+# -----------------------------------------------------------------------------
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB", "portfolio"),
+        "USER": os.getenv("POSTGRES_USER", "pms_user"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
+        "HOST": os.getenv("POSTGRES_HOST", "db"),
+        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+    }
+}
+
+# -----------------------------------------------------------------------------
+# REST Framework
+# -----------------------------------------------------------------------------
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# -----------------------------------------------------------------------------
+# Celery / Redis
+# -----------------------------------------------------------------------------
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_TIMEZONE = "Australia/Sydney"
+
+# -----------------------------------------------------------------------------
+# Static / Media
+# -----------------------------------------------------------------------------
+
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+SITE_ID = 1
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# -----------------------------------------------------------------------------
+# CORS (required for React/Next.js)
+# -----------------------------------------------------------------------------
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+# -----------------------------------------------------------------------------
+# AllAuth Config
+# -----------------------------------------------------------------------------
+
+LOGIN_REDIRECT_URL = "/"
+
+
+# -----------------------------------------------------------------------------
+# Spectacular settings
+# -----------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Portfolio Management API",
+    "DESCRIPTION": "Django REST API for portfolios, prices, dividends, emails, CSV import, insights, and backtesting.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_DIST": "SIDECAR",  # use sidecar static files
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+}

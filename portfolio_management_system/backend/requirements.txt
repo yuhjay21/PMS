@@ -1,0 +1,44 @@
+# Core Django
+Django>=5.0,<6.0
+
+# REST API
+djangorestframework>=3.15
+djangorestframework-simplejwt>=5.3.0
+
+# Auth / Social Login
+django-allauth>=0.62.0
+
+# CORS for React / Next.js
+django-cors-headers>=4.3.0
+
+# PostgreSQL driver
+psycopg2-binary>=2.9
+
+# Celery + Redis
+celery>=5.3
+redis>=5.0
+django-redis>=5.4.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Developer tools
+django-extensions>=3.2.0
+
+# Schema / API docs
+drf-spectacular>=0.27.0
+drf-spectacular-sidecar>=2024.1.1
+
+# Data / Quant / Backtesting
+pandas>=2.2.0
+numpy>=1.26.0
+yfinance>=0.2.40
+
+# HTTP client (for any external APIs you call)
+requests>=2.32.0
+
+# Health checks (if you wire them in)
+django-health-check>=3.18.0
+
+# WSGI server (for production deployment)
+gunicorn>=21.2.0

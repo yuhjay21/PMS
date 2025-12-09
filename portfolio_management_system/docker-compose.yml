@@ -1,0 +1,98 @@
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: portfolio_db
+      POSTGRES_USER: pms_user
+      POSTGRES_PASSWORD: PMS_DB_PS123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    # volumes:
+    #   - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    develop:
+      watch:
+        - action : sync
+          path : ./backend
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./backend/package.json
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+
+  celery:
+    build: ./backend
+    command: celery -A portfolio_management_system worker --loglevel=info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - backend
+      - redis
+
+  celery_beat:
+    build: ./backend
+    command: celery -A portfolio_management_system beat --loglevel=info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - backend
+      - redis
+
+  frontend:
+    build: ./frontend
+    restart: always
+    # volumes:
+    #   - ./frontend:/app
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    develop:
+      watch:
+        - action : sync
+          path : ./frontend
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./frontend/package.json
+    environment:
+      - DEBUG=1
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
