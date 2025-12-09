@@ -17,26 +17,67 @@ export const metadata = {
 };
 
 export default function HomePage() {
+
+  const primaryButtonStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.45rem',
+    padding: '0.7rem 1.05rem',
+    borderRadius: 12,
+    border: 'none',
+    background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
+    color: '#f8fafc',
+    fontWeight: 700,
+    fontSize: '0.95rem',
+    boxShadow: '0 10px 22px rgba(79, 70, 229, 0.25)',
+    textDecoration: 'none',
+    transition: 'transform 120ms ease, box-shadow 120ms ease',
+    minWidth: 150,
+  };
+  
+
+
   return (
-    <div className="html-top-content">
+    <div className="html-top-content " style={{
+        minHeight: '100vh',
+        background:
+          'radial-gradient(circle at 15% 20%, rgba(79, 70, 229, 0.08), transparent 32%), radial-gradient(circle at 85% 15%, rgba(124, 58, 237, 0.08), transparent 30%), #f8fafc',
+        padding: '2.5rem 1.25rem',
+      }}>
       {/* Top banner + header */}
-      <div className="theme-top-section">
+      <div className="theme-top-section" >
         {/* Header / main menu */}
-        <header className="theme-main-menu">
-          <div className="container">
+        <header className="theme-main-menu"
+          style={{
+            padding: '2rem 0rem 1.1rem 0rem',
+            margin: '0rem 1.25rem',
+            borderTopLeftRadius: 14,
+            borderTopRightRadius: 14,
+
+            background: 'linear-gradient(90deg, #4f46e5, #6366f1)',
+            color: '#f8fafc',
+            borderBottom: '1px solid #e5e7eb',
+          }}
+        >
+          <div className="container"
+            
+          >
             <div className="menu-wrapper clearfix">
-              <div className="logo">
+              <div className="logo" >
                 <Link href="/">
-                  <h3>Logo Placeholder</h3>
+                  <h3 style={{ margin: 0, fontSize: '2rem', opacity: 0.92 }}>Portfolio Management System</h3>
                 </Link>
               </div>
 
-              <ul className="right-widget celarfix">
+              <ul className="right-widget celarfix"
+                
+                >
                 {/* We don&apos;t know auth state here, so always show Login for now */}
-                <li className="login-button">
-                  <a href="/accounts/login">
+                <li className="login-button" >
+                  <Link href="/accounts/login" style={primaryButtonStyle}>
                     Login <i className="flaticon-right-thin" />
-                  </a>
+                  </Link>
                 </li>
               </ul>
 
@@ -54,8 +95,8 @@ export default function HomePage() {
                   >
                     <i className="fa fa-bars" aria-hidden="true" />
                   </button>
-                  <div className="collapse navbar-collapse" id="navbarResponsive">
-                    <ul className="navbar-nav">
+                  <div className="navbar navbar-expand-lg" id="navbarResponsive">
+                    <ul className="container-fluid">
                       <li className="nav-item">
                         <a className="nav-link js-scroll-trigger" href="#features">
                           Feature

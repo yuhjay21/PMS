@@ -6,9 +6,6 @@ import { useRouter } from 'next/navigation';
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
-export const metadata = {
-  title: 'Reset Password | Portfolio Management System',
-};
 
 export default function ResetPasswordTokenPage({ params }) {
   const router = useRouter();

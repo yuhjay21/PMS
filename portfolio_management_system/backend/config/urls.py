@@ -23,6 +23,7 @@ from drf_spectacular.views import SpectacularAPIView,SpectacularSwaggerView,Spec
 urlpatterns = [
     # Admin Panel
     path("admin/", admin.site.urls),
+    
 
     # Authentication (allauth or later DRF JWT)
     path("auth/", include("allauth.urls")),
