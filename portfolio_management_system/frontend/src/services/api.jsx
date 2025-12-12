@@ -24,20 +24,20 @@ async function apiFetch(path, options = {}) {
 // Dashboard endpoints
 export function getDashboardHoldings(portfolio = 'all') {
   const params = new URLSearchParams({ portfolio });
-  //return apiFetch(`/api/v1/dashboard/holdings/?${params.toString()}`);
+  return apiFetch(`/api/v1/dashboard/holdings/?${params.toString()}`);
 }
 
 export function getPortfolioPerformance(timeframe = '3m', portfolio = 'all') {
   const params = new URLSearchParams({ timeframe, portfolio });
-  //return apiFetch(`/api/v1/dashboard/performance/?${params.toString()}`);
+  return apiFetch(`/api/v1/dashboard/performance/?${params.toString()}`);
 }
 
 export function getPortfolioInsights(portfolio = 'all') {
   const params = new URLSearchParams({ portfolio });
-  //return apiFetch(`/api/v1/dashboard/insights/?${params.toString()}`);
+  return apiFetch(`/api/v1/dashboard/insights/?${params.toString()}`);
 }
 
 export function getPriceHistory(symbol, range = '1y') {
   const params = new URLSearchParams({ symbol, range });
-  //return apiFetch(`/api/v1/dashboard/prices/history/?${params.toString()}`);
+  return apiFetch(`/api/v1/dashboard/prices/history/?${params.toString()}`);
 }

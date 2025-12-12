@@ -1,5 +1,4 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+
 import { redirect } from 'next/navigation';
 import Link from 'next/link'
 
@@ -55,7 +54,7 @@ export default function HomePage() {
             borderTopLeftRadius: 14,
             borderTopRightRadius: 14,
 
-            background: 'linear-gradient(90deg, #4f46e5, #6366f1)',
+            background: 'linear-gradient(90deg, #018adaff, #01c1daff)',
             color: '#f8fafc',
             borderBottom: '1px solid #e5e7eb',
           }}
@@ -95,10 +94,10 @@ export default function HomePage() {
                   >
                     <i className="fa fa-bars" aria-hidden="true" />
                   </button>
-                  <div className="navbar navbar-expand-lg" id="navbarResponsive">
+                  <div className="navbar navbar-expand-lg " id="navbarResponsive">
                     <ul className="container-fluid">
                       <li className="nav-item">
-                        <a className="nav-link js-scroll-trigger" href="#features">
+                        <a className="nav-link js-scroll-trigger " href="#features">
                           Feature
                         </a>
                       </li>
@@ -244,8 +243,8 @@ export default function HomePage() {
                     className="primary-icon"
                   />
                 </div>
-                <h3>Feature 1</h3>
-                <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
+                <h3>Overview</h3>
+                <p>Monitor and Keep track of your investments, and their returns.</p>
               </div>
             </div>
             <div className="col-md-4 col-xs-12">
@@ -257,8 +256,8 @@ export default function HomePage() {
                     className="primary-icon"
                   />
                 </div>
-                <h3>Feature 2</h3>
-                <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
+                <h3>Dividend</h3>
+                <p>Keep track of dividends received and look ahead of annual dividends based on your current portfolio</p>
               </div>
             </div>
             <div className="col-md-4 col-xs-12">
@@ -270,8 +269,8 @@ export default function HomePage() {
                     className="primary-icon"
                   />
                 </div>
-                <h3>Feature 3</h3>
-                <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
+                <h3>Tax Over</h3>
+                <p>Keep on top of your Tax Game for previous and coming years</p>
               </div>
             </div>
           </div>
@@ -376,7 +375,7 @@ export default function HomePage() {
       </div>
 
       {/* Apps overview */}
-      <div className="apps-overview color-one" id="apps-review">
+      <div className="apps-overview color-one #d-none" id="apps-review">
         <div
           className="overlay-bg"
           style={{ backgroundImage: 'url(/home/images/home/bg2.png)' }}
@@ -548,26 +547,12 @@ export default function HomePage() {
           <div className="row text-center">
             {[
               {
-                name: 'Bhushan Pagare',
-                linkedin: 'https://linkedin.com/in/bpagare6',
-                github: 'https://github.com/bpagare6',
-                site: 'https://bpagare6.github.io',
+                name: 'Usama Javed',
+                linkedin: 'https://linkedin.com/in/usamaj2011',
+                github: 'https://github.com/yuhjay21',
+                
               },
-              {
-                name: 'Purvesh Jain',
-                linkedin: 'https://linkedin.com/in/purvesh-jain-035727155/',
-                github: 'https://github.com/purvesh314',
-              },
-              {
-                name: 'Manav Peshwani',
-                linkedin: 'https://linkedin.com/in/manavpeshwani',
-                github: 'https://github.com/manavpeshwani',
-              },
-              {
-                name: 'Nipun Khivansara',
-                linkedin: 'https://linkedin.com/in/nipun-khivansara-152bb8199/',
-                github: 'https://github.com/Nipunkhivansara',
-              },
+              ,
             ].map((member) => (
               <div className="col" key={member.name}>
                 <div className="single-block clearfix">

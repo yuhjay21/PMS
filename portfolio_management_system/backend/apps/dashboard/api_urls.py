@@ -15,16 +15,8 @@ urlpatterns = [
 
     # Dividends
     path("dividends/check/", CheckDividendsAPI.as_view(), name="dividends_check"),
-    path(
-        "dividends/confirm/<str:symbol>/<str:ex_date>/",
-        ConfirmDividendAPI.as_view(),
-        name="dividends_confirm"
-    ),
-    path(
-        "dividends/confirm-multiple/",
-        ConfirmMultipleDividendsAPI.as_view(),
-        name="dividends_confirm_multiple"
-    ),
+    path("dividends/confirm/<str:symbol>/<str:ex_date>/",ConfirmDividendAPI.as_view(),name="dividends_confirm"),
+    path("dividends/confirm-multiple/",ConfirmMultipleDividendsAPI.as_view(),name="dividends_confirm_multiple"),
 
     #CSV Import
     path("csv/upload/", CSVUploadAPI.as_view(), name="csv_upload"),

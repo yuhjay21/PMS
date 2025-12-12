@@ -1,7 +1,9 @@
 'use client';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
+import '@/styles/globals.css';
 import { useEffect, useState, useRef  } from 'react';
+import { toast  } from 'react-hot-toast';
+import { getCurrentUser } from "@/lib/auth";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -15,6 +17,7 @@ export default function DashboardPageClient() {
   const [csvFile, setCsvFile] = useState(null);
   const [csvUploading, setCsvUploading] = useState(false);
   const [csvDragActive, setCsvDragActive] = useState(false);
+  const [user, setUser] = useState(null);
 
   const fileInputCsvRef = useRef(null);
 
@@ -40,7 +43,12 @@ export default function DashboardPageClient() {
     return cookieValue;
   }
 
-  async function handleCsvUpload() {
+  async function AddTransaction(){
+
+  }
+
+  async function handleCsvUpload(files) {
+
     if (!csvFile) {
       alert('No file selected!');
       return;
@@ -81,6 +89,7 @@ export default function DashboardPageClient() {
         if (!res.ok) throw new Error('Failed to load dashboard');
         const json = await res.json();
         setData(json);
+
       } catch (e) {
         console.error(e);
       } finally {
@@ -88,6 +97,10 @@ export default function DashboardPageClient() {
       }
     }
     fetchDashboard();
+
+    getCurrentUser().then(setUser);
+
+    console.log(user);
   }, []);
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -108,7 +121,7 @@ export default function DashboardPageClient() {
       </div>
     );
   }
-  console.log(data);
+  
   if (!data) {
     return (
       <div className="page-content">
@@ -118,7 +131,8 @@ export default function DashboardPageClient() {
       </div>
     );
   }
-
+  
+  
   const summary = data;
   const holdings = summary.holdings || [];
   const filteredHoldings = showOpenOnly
@@ -131,11 +145,23 @@ export default function DashboardPageClient() {
       : valueMode === 'PnL'
       ? 'Portfolio PnL Analysis vs ASX200'
       : 'Portfolio Performance vs ASX200';
+  //console.log(data);
   
 
   return (
     <div className="page-content">
       <div className="container-fluid">
+
+        {/* === Notification Div === */}
+
+        <div className="row">
+          <div className="col-12">
+             
+          </div>
+        </div>
+
+
+
         {/* === Page title row === */}
         <div className="row">
           <div className="col-12">
@@ -516,9 +542,17 @@ export default function DashboardPageClient() {
                       </button>
                       <div className="dropdown-menu">
                         <h6 className="dropdown-header">Single Item</h6>
-                        <a className="dropdown-item" href="#">
+                        {/* <a className="dropdown-item" href="#">
                           Add Transaction
-                        </a>
+                        </a> */}
+                        <button
+                          type="button"
+                          className="dropdown-item"
+                          data-bs-toggle="modal"
+                          data-bs-target="#myTransactionModal"
+                        >
+                          Add Transaction
+                        </button>
                         <button
                           type="button"
                           className="dropdown-item"
@@ -946,6 +980,196 @@ export default function DashboardPageClient() {
                       </div>
                     </div>
                   </div>
+
+                  {/* === Transaction Modal === */}
+                  <div
+                    id="myTransactionModal"
+                    className="modal fade"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  >
+                    <div className="modal-dialog modal-dialog-centered modal-lg">
+                      <div className="modal-content">
+                        <div className="modal-header">
+                          <h4 className="modal-title">
+                            Add Transactions to your Portfolio
+                          </h4>
+                          <button
+                            type="button"
+                            className="btn-close"
+                            aria-label="Close"
+                            data-bs-dismiss="modal"
+                          />
+                        </div>
+                        <div className="modal-body">
+                          <form id="add-transaction-form" >
+                            <input
+                              name="p_id"
+                              type="hidden"
+                              className="form-control"
+                              value={summary.selectedPortfolioId ?? ''}
+                              readOnly
+                            />
+                            <div className="form-group row mb-4">
+                              <label
+                                htmlFor="date-transaction"
+                                className="col-sm-3 col-form-label"
+                              >
+                                Date of Transaction
+                              </label>
+                              <div className="col-sm-9">
+                                <input
+                                  name="date-transaction"
+                                  className="form-control"
+                                  type="date"
+                                  id="date-transaction"
+                                  defaultValue={todayStr}
+                                  max={todayStr}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="form-group row mb-4">
+                              <label
+                                htmlFor="Symbol"
+                                className="col-sm-3 col-form-label"
+                              >
+                                Company Symbol
+                              </label>
+                              <div className="col-sm-9">
+                                <input
+                                  name="Symbol"
+                                  className="form-control"
+                                  id="Symbol"
+                                  type="text"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="form-group row mb-4">
+                              <label
+                                htmlFor="type"
+                                className="col-sm-3 col-form-label"
+                              >
+                                Type
+                              </label>
+                              <div className="col-sm-9">
+                                <select
+                                  name="type"
+                                  className="form-control"
+                                  //type="number"
+                                  defaultValue="buy"
+                                  id="type"
+                                >
+                                  <option value="Buy">Buy</option>
+                                  <option value="Sell">Sell</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="form-group row mb-4">
+                              <label
+                                htmlFor="price"
+                                className="col-sm-3 col-form-label"
+                              >
+                                Price
+                              </label>
+                              <div className="col-sm-9">
+                                <input
+                                  name="price"
+                                  className="form-control"
+                                  type="number"
+                                  defaultValue="0"
+                                  id="price"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="form-group row mb-4">
+                              <label
+                                htmlFor="quantity"
+                                className="col-sm-3 col-form-label"
+                              >
+                                Quantity
+                              </label>
+                              <div className="col-sm-9">
+                                <input
+                                  name="quantity"
+                                  className="form-control"
+                                  type="number"
+                                  defaultValue={0}
+                                  min={0}
+                                  step={1}
+                                  id="quantity"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="form-group row mb-4">
+                              <label
+                                htmlFor="platform"
+                                className="col-sm-3 col-form-label"
+                              >
+                                Platform
+                              </label>
+                              <div className="col-sm-9">
+                                <input
+                                  name="platform"
+                                  className="form-control"
+                                  type="text"
+                                  defaultValue="STAKE"
+                                  id="platform"
+                                />
+                              </div>
+                            </div>
+                            
+                            
+                            <div className="form-group row mb-4">
+                              <label
+                                htmlFor="Exchange"
+                                className="col-sm-3 col-form-label"
+                              >
+                                Exchange
+                              </label>
+                              <div className="col-sm-9">
+                                <select
+                                  name="Exchange"
+                                  className="form-control"
+                                  defaultValue="ASX"
+                                  id="Exchange"
+                                >
+                                  <option value="ASX">ASX</option>
+                                  <option value="PSX">PSX</option>
+                                  <option value="US">US</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="row mt-4 justify-content-center">
+                              <div className="col-auto mx-auto">
+                                <button
+                                  type="submit"
+                                  className="btn btn-primary"
+                                >
+                                  Submit
+                                </button>
+                              </div>
+                            </div>
+                          </form>
+                        </div>
+                        <div className="modal-footer">
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            data-bs-dismiss="modal"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
                 {/* end modals */}
                 

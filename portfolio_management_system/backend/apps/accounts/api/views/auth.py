@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny,IsAuthenticated
 
 from ..serializers.auth import RegisterSerializer
 
@@ -19,7 +19,6 @@ class RegisterAPI(APIView):
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
-        print(serializer)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -55,7 +54,8 @@ class LoginAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        login(request, user)
+        user = login(request, user)
+        print(user)
         return Response({"detail": "Login successful."}, status=status.HTTP_200_OK)
 
 
@@ -65,3 +65,16 @@ class LogoutAPI(APIView):
     def post(self, request):
         logout(request)
         return Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
+    
+class CurrentUserAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        print(user.id)
+        return Response({
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "is_authenticated": user.is_authenticated,
+        })

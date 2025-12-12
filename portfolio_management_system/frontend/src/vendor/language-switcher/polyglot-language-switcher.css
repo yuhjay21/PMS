@@ -91,21 +91,21 @@
 /* Flags */
 
 #en { 
-	background-image: url(../../images/home/gb.png);
+	background-image: url(/home/images/home/gb.png);
 }
 
 #fr { 
-	background-image: url(../../images/home/fr.png);	
+	background-image: url(/home/images/home/fr.png);	
 }
 
 #de { 
-	background-image: url(../../images/home/de.png);	
+	background-image: url(/home/images/home/de.png);	
 }
 
 #it { 
-	background-image: url(../../images/home/it.png);	
+	background-image: url(/home/images/home/it.png);	
 }
 
 #es { 
-	background-image: url(../../images/home/es.png);	
+	background-image: url(/home/images/home/es.png);	
 }

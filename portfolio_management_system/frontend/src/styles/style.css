@@ -125,7 +125,7 @@
 ====================================================================
 
  ***/
-::-webkit-scrollbar{ width: 8px; }
+::-webkit-scrollbar{ width: 8px; color: #000; }
 ::-webkit-scrollbar-track { background: #f4f4f4;}
  @font-face {
   font-family: 'font-awesome';
@@ -272,7 +272,7 @@ body .theme-button:hover span {opacity: 1;}
   display: block;
   font-size: 20px;
   margin: 0 22px;
-  color: #929eb3;
+  color: #ffffff;
   -o-transition: all .3s linear;
   -moz-transition: all .3s linear;
   -webkit-transition: all .3s linear;
@@ -340,7 +340,7 @@ body .theme-button:hover span {opacity: 1;}
 .theme-main-menu.fixed.full-width {padding: 10px 80px;}
 /*----------------------- Theme Banner One -------------------------*/
 .theme-banner-one {
-  background: url(../images/home/bg1.png) no-repeat center;
+  background: url(/home/images/home/bg1.png) no-repeat center;
   background-size: cover;
 }
 .theme-banner-one .main-text-wrapper {padding: 318px 0 180px;}
@@ -494,7 +494,7 @@ body .theme-button:hover span {opacity: 1;}
 }
 /*----------------------- Theme Banner Three -------------------------*/
 .theme-banner-three {
-  background: url(../images/home/bg8.png) no-repeat center center;
+  background: url(/home/images/home/bg8.png) no-repeat center center;
   background-size: cover;
 }
 .theme-banner-three .main-text-wrapper {padding: 320px 0 400px;}
@@ -877,7 +877,7 @@ body .theme-button:hover span {opacity: 1;}
 }
 /*----------------------- Theme Counter ------------------*/
 .theme-counter .bg-image {
-  background: url(../images/home/bg3.png) no-repeat center;
+  background: url(/home/images/home/bg3.png) no-repeat center;
   padding: 30px 0 120px;
 }
 .theme-counter .bg-image .theme-title p {
@@ -1036,7 +1036,7 @@ body .theme-button:hover span {opacity: 1;}
 .testimonial-section .full-width .owl-theme .owl-dots {margin-top: 85px;}
 /*---------------------- Contact Us One -------------*/
 .contact-us-one {
-  background: url(../images/home/3.jpg) no-repeat center;
+  background: url(/home/images/home/3.jpg) no-repeat center;
   background-size: cover;
   background-attachment: fixed;
 }
@@ -1140,7 +1140,7 @@ body .theme-button:hover span {opacity: 1;}
   z-index: -1;
 }
 .theme-footer .inner-wrapper {
-  background: url(../images/home/bg4.png) no-repeat center center;
+  background: url(/home/images/home/bg4.png) no-repeat center center;
 }
 .theme-footer .top-footer-data-wrapper {
   border-bottom:1px solid #f1f1f1;
@@ -1341,7 +1341,7 @@ body .theme-button:hover span {opacity: 1;}
   z-index: 1;
 }
 .token-sale-section .overlay {
-  background: url(../images/home/bg7.png) no-repeat center center;
+  background: url(/home/images/home/bg7.png) no-repeat center center;
   background-size: cover;
   padding: 130px 0 140px;
   position: relative;
@@ -1602,7 +1602,7 @@ body .theme-button:hover span {opacity: 1;}
   padding: 295px 0 140px;
 }
 .contact-section-dark:before {
-  content: url(../images/shape/15.png);
+  content: url(/home/images/shape/15.png);
   position: absolute;
   top:41%;
   left:0;

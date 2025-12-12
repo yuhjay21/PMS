@@ -46,6 +46,7 @@ INSTALLED_APPS = [
 
     # Local apps
     "apps.home",
+    "apps.accounts",
     "apps.dashboard",
     "apps.riskprofile",
     "apps.users",
