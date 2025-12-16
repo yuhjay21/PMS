@@ -1,5 +1,5 @@
 from django.urls import path
-from apps.dashboard.api.views.portfolio import DashboardHoldingsAPI
+from apps.dashboard.api.views.portfolio import DashboardHoldingsAPI, UserPortfoliosAPI
 from apps.dashboard.api.views.performance import PortfolioPerformanceAPI
 from apps.dashboard.api.views.dividends import CheckDividendsAPI,ConfirmDividendAPI,ConfirmMultipleDividendsAPI
 from apps.dashboard.api.views.csv_import import CSVUploadAPI,UpdateHoldingsAPI
@@ -10,6 +10,7 @@ from apps.dashboard.api.views.insights import PortfolioInsightsAPI
 from apps.dashboard.api.views.backtesting import BacktestingAPI
 
 urlpatterns = [
+    path("portfolios/", UserPortfoliosAPI.as_view(), name="user_portfolios"),
     path("holdings/", DashboardHoldingsAPI.as_view(), name="dashboard_holdings"),
     path("performance/", PortfolioPerformanceAPI.as_view(), name="dashboard_performance"),
 

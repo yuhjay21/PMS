@@ -41,3 +41,7 @@ export function getPriceHistory(symbol, range = '1y') {
   const params = new URLSearchParams({ symbol, range });
   return apiFetch(`/api/v1/dashboard/prices/history/?${params.toString()}`);
 }
+
+export function getUserPortfolios() {
+  return apiFetch('/api/v1/dashboard/portfolios/');
+}

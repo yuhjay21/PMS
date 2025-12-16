@@ -1,88 +1,109 @@
+from django.db import transaction as db_transaction
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
+
 import csv, io
 import pandas as pd
 from datetime import datetime
 
 from apps.dashboard.api.serializers.csv_import import CSVUploadSerializer
-from apps.dashboard.services.csv_importer import process_csv_rows
-from apps.dashboard.models import Portfolio, StockHolding, transaction,deposit, AppSecret, Ticker, TickerData
+from apps.dashboard.models import Portfolio, StockHolding, transaction as TxnModel, deposit as DepositModel
+from apps.dashboard.services.csv_importer import process_csv_rows  # recommended to move logic here
 
 
 class CSVUploadAPI(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
     def post(self, request):
-        csv_file = request.FILES['csv_file']
+        serializer = CSVUploadSerializer(data=request.data, context={"request": request})
 
+        serializer.is_valid(raise_exception=True)
+        csv_file = serializer.validated_data["file"]
+        portfolio_id = serializer.validated_data["portfolio_id"]
+        reset_portfolio = serializer.validated_data["reset_portfolio"]
+
+        # IMPORTANT: scope portfolio to the user
+        portfolio = get_object_or_404(Portfolio, id=portfolio_id, user=request.user)
+        # Read file safely
         try:
-            decoded_file = csv_file.read().decode('utf-8')
-            io_string = io.StringIO(decoded_file)
-            csv_reader = list(csv.DictReader(io_string))
+            decoded = csv_file.read().decode("utf-8-sig")  # utf-8-sig handles BOM
+        except Exception as e:
+            return Response(
+                {"success": False, "message": "Could not read CSV file", "error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-            df  = pd.DataFrame(csv_reader)
-            df.columns = df.columns.str.replace('\ufeff', '').str.strip()
-            df['Date'] = pd.to_datetime(df['Date'],dayfirst=True,format='mixed')
-            df = df.sort_values(by="Date",ignore_index=0)
-            df['Date'] = df['Date'].dt.strftime("%d/%m/%Y")
-            for index, row in df.iterrows():
-                # try:  
-                symbol = row['Holding'] # String
-                if symbol is None or symbol=="" :
-                    continue
-                trade_type = row['Type']  # String (e.g., 'buy' or 'sell')
-                Exchange = row['Exchange']
-                if Exchange == "AX" or Exchange =="ASX":
-                    symbol = symbol + ".AX"
-                quantity = float(row['Quantity'])  # Integer
-                # Convert date string to Python datetime object (assuming format 'YYYY-MM-DD')
-                date_str = str(row['Date'])
+        # Parse CSV -> DataFrame
+        try:
+            io_string = io.StringIO(decoded)
+            rows = list(csv.DictReader(io_string))
 
-                date = datetime.strptime(date_str, '%d/%m/%Y') if date_str else None
+            if not rows:
+                return Response(
+                    {"success": False, "message": "CSV contains no data rows"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-                if trade_type == "Cash Deposit":
+            df = pd.DataFrame(rows)
+            df.columns = df.columns.str.strip()
 
-                    # cash = add_deposit(request,{
-                    # 'p_id' : portfolio_id,
-                    # 'currency':symbol,
-                    # 'amount':quantity,
-                    # 'plateform': Exchange,
-                    # 'date_transaction' :date
-                    # })
-                    # cash.save()
-                    "nothing"
-                else:
-                    commission = float(row['Brokerage'])  # Float
-                    price = float(row['Price'])  # Float
-                    # holding = update_holdings(request,{
-                    # 'p_id' : portfolio_id,
-                    # 'symbol':symbol,
-                    # 'quantity':quantity,
-                    # 'commission':commission,
-                    # 'exchange': Exchange,
-                    # 'trade_type':trade_type,
-                    # 'price':price
-                    # })
-                    new_transaction = transaction.objects.create(Holding="holding", 
-                                                                symbol = symbol,
-                                                                date_transaction = date, 
-                                                                Buy_Price = price, 
-                                                                Quantity = quantity, 
-                                                                Total = (price * quantity + commission) if trade_type!="sell" else price * quantity - commission,
-                                                                transaction_type = trade_type, 
-                                                                Commission = commission)
+            if "Date" not in df.columns:
+                return Response(
+                    {"success": False, "message": "CSV missing required column: Date"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-            return Response({
-                "success": True,
-                "message" : "CSV File successfully added"
-            }, status=200)
-        except:
-            Response({
-                "success": False,
-                "message" : "Process failed.",
-                "errors": ValueError,
-            }, status=303)
+            df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, format="mixed", errors="coerce")
+            if df["Date"].isna().any():
+                bad = df[df["Date"].isna()].head(5).to_dict(orient="records")
+                return Response(
+                    {"success": False, "message": "Some Date values could not be parsed", "examples": bad},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            df = df.sort_values(by="Date", ignore_index=True)
+            df["Date"] = df["Date"].dt.strftime("%d/%m/%Y")
+
+        except Exception as e:
+            return Response(
+                {"success": False, "message": "CSV parsing failed", "error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # ✅ Atomic: either all imports apply, or none do
+        try:
+            with db_transaction.atomic():
+
+                if reset_portfolio:
+                    # Only wipe AFTER we know parsing worked
+                    portfolio.total_investment = 0
+                    portfolio.total_amount = 0
+                    portfolio.save(update_fields=["total_investment", "total_amount"])
+
+                    StockHolding.objects.filter(portfolio__id=portfolio_id).delete()
+                    DepositModel.objects.filter(portfolio__id=portfolio_id).delete()
+                    TxnModel.objects.filter(Holding__portfolio__id=portfolio_id).delete()  # if txn has portfolio FK
+                # Prefer to move this into services/csv_importer.py
+                result = process_csv_rows(
+                    file_obj=df,
+                    pf_id=portfolio_id,
+                )
+
+            return Response(
+                {"success": True, "message": "CSV File successfully added", "result": result},
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            return Response(
+                {"success": False, "message": "Process failed", "error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class UpdateHoldingsAPI(APIView):

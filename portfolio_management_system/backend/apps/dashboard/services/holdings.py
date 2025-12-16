@@ -64,7 +64,7 @@ def sell_holding(holding, portfolio_id, price, quantity, commission):
     return holding
 
 
-def update_holdings(user, holding_data):
+def update_holdings(holding_data):
     """
     Clean service-layer replacement for update_holdings() originally located in views.py.
     Source logic from:

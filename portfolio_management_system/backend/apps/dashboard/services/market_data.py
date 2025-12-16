@@ -11,7 +11,7 @@ from ..models import Ticker, TickerData
 SymbolLike = Union[str, Iterable[str]]
 
 
-def normalize_symbols(symbols: SymbolLike) -> List[str]:
+def normalize_symbols(symbols):
     """
     Ensure we always work with a clean list of symbols.
     """

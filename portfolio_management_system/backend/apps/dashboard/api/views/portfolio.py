@@ -5,6 +5,7 @@ from rest_framework import status
 
 from apps.dashboard.models import Portfolio, StockHolding, transaction, deposit
 from apps.dashboard.api.serializers.holdings import HoldingSerializer
+from apps.dashboard.api.serializers.transactions import TransactionSerializer
 from apps.dashboard.utils.dates import weekday_dates
 from apps.dashboard.services.pnl import annotate_realized_pnl
 from apps.dashboard.services.market_data import get_prices
@@ -14,6 +15,12 @@ import math
 from datetime import datetime, timedelta, date
 import pandas as pd
 
+class UserPortfoliosAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user_portfolios = Portfolio.objects.filter(user=request.user).values("id", "name")
+        return Response({"portfolios": list(user_portfolios)}, status=status.HTTP_200_OK)
 
 class DashboardHoldingsAPI(APIView):
     permission_classes = [IsAuthenticated]
@@ -31,8 +38,12 @@ class DashboardHoldingsAPI(APIView):
         # --- Determine if showing combined or single portfolio ---
         if selected_portfolio_id and selected_portfolio_id != "all":
             portfolios = user_portfolios.filter(id=selected_portfolio_id)
+            if not portfolios.exists():
+                return Response({"detail": "Portfolio not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
             portfolios = user_portfolios
+
+
 
         # --- Get all holdings for these portfolios (same aggregation as original) ---
         holding_companies = (
@@ -94,7 +105,7 @@ class DashboardHoldingsAPI(APIView):
         # --- Portfolio-wise totals ---
         total_investment = portfolios.aggregate(Sum('total_investment'))['total_investment__sum'] or 0
         total_cash = portfolios.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-
+        
         # --- Iterate through holdings (same as original logic) ---
         for c in holding_companies:
             company_symbol = c['company_symbol']
@@ -130,11 +141,9 @@ class DashboardHoldingsAPI(APIView):
                     c['avg_ltp'] = market_price
                     for each_holding in holding_qs:
                         try:
-                            each_holding.LTP = market_price
-                            each_holding.save()
+                            holding_qs.update(LTP=market_price)
                         except Exception:
-                            each_holding.LTP = prev_market_price
-                            each_holding.save()
+                            holding_qs.update(LTP=prev_market_price)
             except TypeError:
                 # market_price might not be float; fall back to avg_ltp or prev price
                 market_price = c.get('avg_ltp') or prev_market_price or 0
@@ -214,22 +223,14 @@ class DashboardHoldingsAPI(APIView):
             .annotate(portfolio_name=F('Holding__portfolio__name'))
             .order_by('date_transaction', 'id')
         )
-        txns_dict = annotate_realized_pnl(list(txns))
+
+        txns_data = TransactionSerializer(txns, many=True).data
+
+        txns_dict = annotate_realized_pnl(list(txns_data))
 
         # --- Final metrics (mirror original context keys) ---
         context = {
             'holdings': holdings,
-            'portfolioValue' : "",
-            'cash': "",
-            'unrealizedPnl':"",
-            'unrealizedPnlPct' : 3.41225,
-            'dayPnl':"",
-            'dayPnlPct':"",
-            'totalDividends':"",
-            'dividendYieldPct':"",
-            'totalReturns':"",
-            'totalReturnsPct':"",
-            'totalInvestment':"",
             'transactions': txns_dict,
             'Total_Value': sum_value,
             'total_cash': total_cash,

@@ -1,6 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import 'bootstrap/dist/css/bootstrap.min.css';
+//import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 //
+import 'react-tooltip/dist/react-tooltip.css';
 import "./globals.css";
 import "@/styles/style.css";
 import "@/styles/responsive.css";
