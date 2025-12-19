@@ -9,6 +9,7 @@ from apps.dashboard.api.serializers.transactions import TransactionSerializer
 from apps.dashboard.utils.dates import weekday_dates
 from apps.dashboard.services.pnl import annotate_realized_pnl
 from apps.dashboard.services.market_data import get_prices
+from apps.dashboard.services.market_schedule import schedule_market_refresh_if_needed
 
 from django.db.models import Sum, Avg, F, FloatField, ExpressionWrapper
 import math
@@ -27,7 +28,10 @@ class DashboardHoldingsAPI(APIView):
 
     def get(self, request):
         # --- Update historical data (side-effect as in original view) ---
-        #check_update_historicaldata()
+        schedule_market_refresh_if_needed(
+            trigger_reason="dashboard-load",
+            allow_closed_catch_up=True,
+        )
 
         # --- Get selected portfolio ID from GET params ---
         selected_portfolio_id = request.GET.get("portfolio")

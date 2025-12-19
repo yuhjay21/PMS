@@ -1,5 +1,4 @@
 'use client';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 import '@/styles/globals.css';
 import { useEffect, useState, useRef, useMemo  } from 'react';
@@ -367,6 +366,8 @@ export default function DashboardPageClient() {
 
   useEffect(() => {
     getCurrentUser().then(setUser);
+    import('bootstrap/dist/js/bootstrap.bundle.min.js');
+
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-
+from celery.schedules import crontab
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -127,7 +127,15 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = "Australia/Sydney"
-
+CELERY_IMPORTS = ["apps.dashboard.tasks.market_tasks",]
+CELERY_BEAT_SCHEDULE = {
+    "asx-market-window": {
+        "task": "apps.dashboard.tasks.market_tasks.schedule_asx_market_check",
+        # Run frequently during the trading day (and slightly around it) Mon-Fri
+        "schedule": crontab(minute="*/15", hour="7-18", day_of_week="1-5"),
+    },
+}
+CELERY_BEAT_MAX_LOOP_INTERVAL = 60
 # -----------------------------------------------------------------------------
 # Static / Media
 # -----------------------------------------------------------------------------

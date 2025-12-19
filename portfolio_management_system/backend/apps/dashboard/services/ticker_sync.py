@@ -9,11 +9,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Iterable, List, Optional
+import datetime
 
 import pandas as pd
 import yfinance as yf
+from django.core.cache import cache
 from django.db.models import Max, Min, Sum
-import datetime
+from django.utils import timezone
 
 from apps.dashboard.models import StockHolding, Ticker, TickerData, transaction as StockTransaction
 
@@ -146,23 +148,34 @@ def _window_for_refresh(ticker_obj: Ticker, today: date) -> tuple[Optional[date]
     - If data exists but starts after first_txn, backfill from first_txn.
     - If latest stored date is before today, fetch from the day after the last row.
     - Otherwise, no refresh is needed.
+
+    - Fetch only missing historical windows, avoiding already-stored past days.
+    - If the latest stored row is today, allow a same-day refresh window for
+      intraday updates (throttled separately).
     """
 
     tkr = Ticker.objects.get(symbol=ticker_obj.symbol)
 
     min_date = tkr.first_txn
-    max_date = tkr.last_txn
-
     expected_start = min_date or (today - timedelta(days=365))
 
-    if max_date is None:
+    first_row = ticker_obj.historical_data.order_by("date").first()
+    last_row = ticker_obj.historical_data.order_by("-date").first()
+
+    if not last_row:
         return expected_start, today
 
-    # if expected_start and min_date and min_date > expected_start:
-    #     return expected_start, today
+    if first_row and expected_start < first_row.date:
+        backfill_end = first_row.date - timedelta(days=1)
+        if expected_start <= backfill_end:
+            return expected_start, backfill_end
 
-    if max_date <= today:
-        return expected_start, max_date
+    latest_date = last_row.date
+    if latest_date < today:
+        return latest_date + timedelta(days=1), today
+
+    if latest_date == today:
+        return today, today
 
     return None, None
 

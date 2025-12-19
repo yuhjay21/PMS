@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.core.cache import cache
 from apps.dashboard.services.market_data import get_prices
+from apps.dashboard.services.market_schedule import schedule_market_refresh_if_needed
 from apps.dashboard.tasks.price_tasks import update_symbol_prices_task
 from apps.dashboard.models import StockHolding, Portfolio
 from datetime import datetime, timedelta
@@ -47,6 +48,11 @@ class PriceHistoryAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        schedule_market_refresh_if_needed(
+            trigger_reason="price-history",
+            allow_closed_catch_up=True,
+        )
+
         symbol = request.GET.get("symbol")
         range_ = request.GET.get("range", "1y")
 
