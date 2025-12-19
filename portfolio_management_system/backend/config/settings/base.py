@@ -12,6 +12,9 @@ DEBUG = False   # Overwritten in dev.py
 
 ALLOWED_HOSTS = ["*"]
 
+USE_TZ = True
+TIME_ZONE = 'Australia/Sydney'
+
 # -----------------------------------------------------------------------------
 # Applications
 # -----------------------------------------------------------------------------

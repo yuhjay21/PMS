@@ -7,11 +7,15 @@ export const metadata = {
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
+const API_VER =
+  process.env.NEXT_PUBLIC_API_VER_URL ;
+
 export default async function DashboardPage() {
 
   const cookieStore = await cookies();
 
-  const res = await fetch(`${API_BASE}/accounts/me/`, {
+  const res = await fetch(`${process.env.API_BASE}/accounts/me/`, {
+    method: "GET",
     headers: {
       Cookie: cookieStore.toString(),
     },

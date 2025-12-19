@@ -1,5 +1,12 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from apps.dashboard.models import Portfolio, StockHolding, transaction, deposit, AppSecret, Ticker, TickerData
+
+
+def reset_model_data(modeladmin, request, queryset):
+    # This action ignores the selected queryset and deletes all objects
+    TickerData.objects.all().delete()
+    messages.success(request, "The database has been reset (all records deleted).")
+reset_model_data.short_description = "Reset YourModel database (deletes all records)"
 
 # Register your models here.
 @admin.register(Portfolio)
@@ -41,3 +48,4 @@ class TickerDataAdmin(admin.ModelAdmin):
     list_display = ('date',"ticker",'close','open', "high", 'low')
     list_filter = ('ticker','date')
     search_fields = ("ticker",)
+    actions = [reset_model_data]

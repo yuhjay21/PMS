@@ -45,7 +45,7 @@ services:
 
   celery:
     build: ./backend
-    command: celery -A portfolio_management_system worker --loglevel=info
+    command: celery -A config worker --loglevel=info
     volumes:
       - ./backend:/app
     depends_on:
@@ -54,7 +54,7 @@ services:
 
   celery_beat:
     build: ./backend
-    command: celery -A portfolio_management_system beat --loglevel=info
+    command: celery -A config beat --loglevel=info
     volumes:
       - ./backend:/app
     depends_on:
@@ -92,7 +92,7 @@ services:
       - backend
       - frontend
     ports:
-      - "80:80"
+      - "8080:80"
 
 volumes:
   postgres_data:

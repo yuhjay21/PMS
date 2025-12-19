@@ -10,7 +10,6 @@ def process_csv_rows(file_obj, pf_id):
     Expected CSV columns:
       symbol, date, price, qty, type, commission
     """
-    print("Test in Row Processing")
     #decoded = file_obj.read().decode("utf-8").splitlines()
     #reader = csv.DictReader(decoded)
 
@@ -35,15 +34,6 @@ def process_csv_rows(file_obj, pf_id):
 
                 
             # Create holding or load existing
-            holding, created = StockHolding.objects.get_or_create(
-                portfolio=portfolio,
-                company_symbol=symbol,
-                defaults={
-                    "company_name": symbol,
-                    "sector": "",
-                    "Exchange": "ASX",
-                }
-            )
 
             if txn_type == "Cash Deposit":
                 if portfolio.currency != symbol or portfolio.plateform != exchange:
@@ -58,6 +48,15 @@ def process_csv_rows(file_obj, pf_id):
                     date_transaction = date_txn
                 )
             else:
+                holding, created = StockHolding.objects.get_or_create(
+                    portfolio=portfolio,
+                    company_symbol=symbol,
+                    defaults={
+                        "company_name": symbol,
+                        "sector": "",
+                        "Exchange": "ASX",
+                    }
+                )
                 Holding_Data = update_holdings(
                     {'p_id'      :pf_id,
                     'symbol'    :symbol,

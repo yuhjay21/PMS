@@ -9,8 +9,6 @@ from apps.dashboard.models import StockHolding, Portfolio
 from datetime import datetime, timedelta
 import pandas as pd
 
-from apps.dashboard.tasks.price_tasks import update_symbol_prices_task
-
 
 class UpdatePricesAPI(APIView):
     """
@@ -97,7 +95,7 @@ class UpdatePortfolioTickersAPI(APIView):
             .values_list("company_symbol", flat=True)
             .distinct()
         )
-
+        
         if not symbols:
             return Response({"error": "No holdings found"}, status=400)
 

@@ -71,7 +71,6 @@ class CurrentUserAPI(APIView):
 
     def get(self, request):
         user = request.user
-        print(user.id)
         return Response({
             "id": user.id,
             "username": user.username,
