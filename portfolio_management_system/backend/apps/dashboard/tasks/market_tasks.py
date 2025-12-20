@@ -16,7 +16,9 @@ from apps.dashboard.services.market_schedule import (
     should_refresh_market_data,
 )
 from apps.dashboard.services.ticker_sync import refresh_ticker_history
+from celery.utils.log import get_task_logger
 
+logger = get_task_logger(__name__)
 
 @shared_task(bind=True, name="apps.dashboard.tasks.market_tasks.capture_asx_market_snapshot")
 def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
@@ -28,7 +30,6 @@ def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
     """
     now = market_now()
     last_refresh = get_last_refresh()
-
     if not should_refresh_market_data(
         last_refresh,
         now=now,
@@ -39,12 +40,12 @@ def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
             "reason": "data is fresh",
             "last_refresh": last_refresh.isoformat() if last_refresh else None,
         }
-    
-    if not acquire_refresh_lock(trigger_reason=trigger_reason, timeout_seconds=120):
-        return {"skipped": True, "reason": "another refresh is already running"}
+    # if not acquire_refresh_lock(trigger_reason=trigger_reason, timeout_seconds=120):
+    #     return {"skipped": True, "reason": "Refresh done within timeout seconds"}
 
     try:
         symbols = _tracked_asx_symbols()
+        print(symbols)
         if not symbols:
             return {"skipped": True, "reason": "no ASX symbols configured"}
         results = refresh_ticker_history(symbols)

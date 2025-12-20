@@ -19,7 +19,7 @@ MARKET_TZ = ZoneInfo(settings.TIME_ZONE)
 MARKET_OPEN = time(hour=10, minute=0)
 MARKET_CLOSE = time(hour=16, minute=10)
 
-REFRESH_LOCK_SECS = 60*5
+REFRESH_LOCK_SECS = 5
 DEFAULT_MAX_AGE_MINUTES = 15
 
 
@@ -29,12 +29,13 @@ def market_now() -> datetime:
 
 
 def _get_refresh_state(*, for_update: bool = False) -> MarketRefreshState:
-    query = MarketRefreshState.objects
-    if for_update:
-        query = query.select_for_update()
+    with transaction.atomic():
+        query = MarketRefreshState.objects
+        if for_update:
+            query = query.select_for_update()
 
-    state, _ = query.get_or_create(pk=1)
-    return state
+        state, _ = query.get_or_create(pk=1)
+        return state
 
 
 def last_trading_day(reference: datetime) -> datetime.date:
@@ -158,7 +159,6 @@ def should_refresh_market_data(
 
     if not is_market_open(now):
         return False
-
     if last_refresh is None:
         return True
 
@@ -185,18 +185,17 @@ def schedule_market_refresh_if_needed(
         now=now,
         max_age_minutes=max_age_minutes,
         allow_closed_catch_up=allow_closed_catch_up,
-    ):
+    ):  
         return None
-
     if not acquire_refresh_lock(
         trigger_reason=trigger_reason, timeout_seconds=REFRESH_LOCK_SECS
     ):
         return None
-
     # Avoid import cycles by importing the task lazily
     from apps.dashboard.tasks.market_tasks import capture_asx_market_snapshot
     
-    result = capture_asx_market_snapshot.apply_async(
-        kwargs={"trigger_reason": trigger_reason}
+    result = capture_asx_market_snapshot.delay(
+        trigger_reason= trigger_reason
     )
+    print("Queued capture_asx_market_snapshot task_id=", result.id)
     return result

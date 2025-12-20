@@ -1,10 +1,22 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
+function getCookie(name) {
+    if (typeof document === 'undefined') return null;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  } 
+
 async function apiFetch(path, options = {}) {
+
+  const csrftoken = getCookie('csrftoken');
+
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: 'include', // if using session auth
     headers: {
       'Content-Type': 'application/json',
+      'X-CSRFToken': csrftoken || '',
       ...(options.headers || {}),
     },
     ...options,
@@ -57,4 +69,11 @@ export function getPriceHistory(symbol, range = '1y') {
 
 export function getUserPortfolios() {
   return apiFetch('/api/v1/dashboard/portfolios/');
+}
+
+export function createUserPortfolio(payload) {
+  return apiFetch('/api/v1/dashboard/portfolios/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

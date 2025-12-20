@@ -74,7 +74,7 @@ class CSVUploadAPI(APIView):
                 {"success": False, "message": "CSV parsing failed", "error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        print(df)
         # ✅ Atomic: either all imports apply, or none do
         try:
             with db_transaction.atomic():

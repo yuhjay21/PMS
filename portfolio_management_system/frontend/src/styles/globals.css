@@ -266,6 +266,11 @@ a {
   right: 10px;
 }
 
+.dropdown-menu-end {
+  right: 0;
+  left: auto;
+}
+
 .footer-link:hover {
   background: rgba(79, 70, 229, 0.25);
   transform: translateY(-1px);
@@ -346,4 +351,4 @@ a {
 
 .metric-sub {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #6b7280;}

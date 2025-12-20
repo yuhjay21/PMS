@@ -31,12 +31,11 @@ def process_csv_rows(file_obj, pf_id):
                 continue
 
             portfolio = portfolios.first()
-
-                
+   
             # Create holding or load existing
 
             if txn_type == "Cash Deposit":
-                if portfolio.currency != symbol or portfolio.plateform != exchange:
+                if portfolio.currency.upper() != symbol.upper() or portfolio.platform.upper() != exchange.upper():
                     errors.append(f" Portfolio with Symbol ({symbol}) & Plateform ({exchange}) doesnt exist")
                     continue
                 portfolio.total_amount += qty
@@ -54,7 +53,7 @@ def process_csv_rows(file_obj, pf_id):
                     defaults={
                         "company_name": symbol,
                         "sector": "",
-                        "Exchange": "ASX",
+                        "Exchange": exchange,
                     }
                 )
                 Holding_Data = update_holdings(
@@ -85,5 +84,5 @@ def process_csv_rows(file_obj, pf_id):
             #print(row.get("Holding"), str(e))
             errors.append(str(e))
             break
-
+    print(responses, errors)
     return responses, errors

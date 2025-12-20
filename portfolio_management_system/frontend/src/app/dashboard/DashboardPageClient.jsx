@@ -474,15 +474,15 @@ export default function DashboardPageClient() {
 
   if (!selectedPortfolio) {
     return (
-      <div className="page-content">
+      <div className="page-content d-flex align-items-center h-100" style={{ minHeight: '80vh' }}>
         <div className="container-fluid">
-          <p className="text-center fs-3">No Portfolio Exist for this User</p>
-          <p className="text-center fs-5">Please create a Portfolio First.</p>
+          <p className="text-center fs-5">No Portfolio Exist for this User</p>
+          <p className="text-center fs-7">Please create a Portfolio First.</p>
         </div>
       </div>
     );
   }
-  
+
   if (!data) {
     return (
       <div className="page-content">

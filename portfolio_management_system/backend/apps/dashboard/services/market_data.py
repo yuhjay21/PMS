@@ -188,9 +188,7 @@ def get_prices(
     else:
         # Multiple symbols → MultiIndex columns (symbol, field)
         frames = []
-
         updated_symbols = get_symbols_with_Exchange(symbols_list)
-
         for s in updated_symbols:
 
             if "symbol" in df.columns:
@@ -211,6 +209,5 @@ def get_prices(
                     sub[["Open", "High", "Low", "Close", "Volume"]]
                 )
 
-        multi_df = pd.concat(frames, axis=1, keys=symbols_list)
-
+        multi_df = pd.concat(frames, axis=1, keys=[s.split(".", 1)[0] for s in updated_symbols])
         return multi_df.sort_index()

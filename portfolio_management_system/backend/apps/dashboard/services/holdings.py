@@ -18,7 +18,7 @@ def buy_holding(holding, portfolio_id, price, quantity, commission):
     holding.save()
 
     # Update cash portfolio
-    cash = Portfolio.objects.get(id=portfolio_id, currency="AUD", plateform="STAKE")
+    cash = Portfolio.objects.get(id=portfolio_id, currency="AUD", platform="STAKE")
     cash.total_amount -= (price * quantity)
     cash.total_amount -= commission
     cash.total_investment += (price * quantity)
@@ -55,7 +55,7 @@ def sell_holding(holding, portfolio_id, price, quantity, commission):
     holding.save()
 
     # Update cash portfolio
-    cash = Portfolio.objects.get(id=portfolio_id, currency="AUD", plateform="STAKE")
+    cash = Portfolio.objects.get(id=portfolio_id, currency="AUD", platform="STAKE")
     cash.total_amount += (price * quantity)
     cash.total_amount -= commission
     cash.total_investment -= (price * quantity)

@@ -6,6 +6,8 @@ from django.core.cache import cache
 
 from apps.dashboard.models import Portfolio, StockHolding, transaction, deposit
 from apps.dashboard.api.serializers.holdings import HoldingSerializer
+from apps.dashboard.api.serializers.portfolio import PortfolioSerializer
+
 from apps.dashboard.api.serializers.transactions import TransactionSerializer
 from apps.dashboard.utils.dates import weekday_dates
 from apps.dashboard.services.pnl import annotate_realized_pnl
@@ -13,6 +15,7 @@ from apps.dashboard.services.market_data import get_prices
 from apps.dashboard.services.market_schedule import schedule_market_refresh_if_needed
 
 from django.db.models import Sum, Avg, F, FloatField, ExpressionWrapper
+from django.db.models.functions import NullIf
 import math
 from datetime import datetime, timedelta, date
 import pandas as pd
@@ -23,14 +26,53 @@ class UserPortfoliosAPI(APIView):
     def get(self, request):
         user_portfolios = Portfolio.objects.filter(user=request.user).values("id", "name")
         return Response({"portfolios": list(user_portfolios)}, status=status.HTTP_200_OK)
+    
+    def post(self,request):
+        pf_serialized = PortfolioSerializer(data=request.data, context={"request": request})
+
+        pf_serialized.is_valid(raise_exception=True)
+        name = pf_serialized.validated_data["name"]
+        description = pf_serialized.validated_data.get("description", "")
+        currency = pf_serialized.validated_data.get("currency", "AUD")
+        platform = pf_serialized.validated_data.get("platform", "STAKE")
+
+
+        portfolio, created = Portfolio.objects.get_or_create(
+            user=request.user,
+            name=name,
+            defaults={
+                "description": description,
+                "currency": currency.upper(),
+                "platform": platform.upper(),
+                "total_investment": 0,
+                "total_amount": 0,
+            },
+        )
+
+        # If it already existed, you can optionally update fields
+        if not created:
+            # Update only if you want "upsert" behavior
+            portfolio.description = description
+            portfolio.currency = currency
+            portfolio.plateform = platform
+            portfolio.save(update_fields=["description", "currency", "platform"])
+
+            return Response(
+                {"id": portfolio.id, "created": False, "message": "Portfolio already existed; updated."},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {"id": portfolio.id, "created": True, "message": "Created"},
+            status=status.HTTP_201_CREATED,
+        ) 
 
 class DashboardHoldingsAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # --- Update historical data (side-effect as in original view) ---
-        cache.delete("market:last_refresh")
-        cache.delete("market:refresh:lock")
+
         schedule_market_refresh_if_needed(
             trigger_reason="dashboard-load",
             allow_closed_catch_up=True,
@@ -68,7 +110,7 @@ class DashboardHoldingsAPI(APIView):
                 total_unrealized_pnl=Sum('UnRealized_PnL'),
                 avg_ltp=Avg('LTP'),
                 weighted_avg_buy_price=ExpressionWrapper(
-                    Sum('total_cost') / Sum('number_of_shares'),
+                    Sum('total_cost') / NullIf(Sum('number_of_shares'),0.0),
                     output_field=FloatField()
                 ),
             )
@@ -126,9 +168,9 @@ class DashboardHoldingsAPI(APIView):
             average_cost = c['weighted_avg_buy_price'] or 0
             pk = c['id']
 
-            market_price = latest_prices.get(company_symbol, 0) or 0
-            prev_market_price = yesterday_prices.get(company_symbol, 0) or 0
-
+            market_price = latest_prices.get(company_symbol, 0) or latest_prices.get(company_symbol+"."+exchange, 0) or 0
+            prev_market_price = yesterday_prices.get(company_symbol, 0) or yesterday_prices.get(company_symbol+"."+exchange, 0) or 0
+            
             # Query original individual holdings for LTP update
             holding_qs = StockHolding.objects.filter(
                 portfolio__in=portfolios,

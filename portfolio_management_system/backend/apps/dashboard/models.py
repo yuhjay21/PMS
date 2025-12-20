@@ -10,11 +10,10 @@ class Portfolio(models.Model):
   total_investment = models.FloatField(default=0)
   total_amount = models.FloatField(default=0)
   currency = models.CharField(default='AUD', max_length=5)
-  plateform = models.CharField(default='STAKE', max_length=10)
+  platform  = models.CharField(default='STAKE', max_length=10)
 
   def update_investment(self):
     investment = 0
-    total_amount = 0
     holdings = StockHolding.objects.filter(portfolio=self)
     for c in holdings:
       investment += c.investment_amount
@@ -23,6 +22,11 @@ class Portfolio(models.Model):
 
   def __str__(self):
     return "Portfolio : " + str(self.name)
+  
+  class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "name"], name="uniq_portfolio_per_user_name")
+        ]
 
 class AppSecret(models.Model):
     Key_types = {

@@ -11,8 +11,8 @@ reset_model_data.short_description = "Reset YourModel database (deletes all reco
 # Register your models here.
 @admin.register(Portfolio)
 class PortfolioAdmin(admin.ModelAdmin):
-    list_display = ('user','name','plateform','total_investment','total_amount')
-    list_filter = ('plateform',)
+    list_display = ('user','name','platform','total_investment','total_amount')
+    list_filter = ('platform',)
     search_fields = ("name",)
 
 
@@ -53,4 +53,4 @@ class TickerDataAdmin(admin.ModelAdmin):
 
 @admin.register(MarketRefreshState)
 class MarketRefreshStateAdmin(admin.ModelAdmin):
-    list_display = ('last_refresh',"refresh_lock_reason",'refresh_lock_acquired_at','refresh_lock_expires_at')
+    list_display = ('id','last_refresh',"refresh_lock_reason",'refresh_lock_acquired_at','refresh_lock_expires_at')

@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { getCurrentUser } from "@/lib/auth";
 import { getUserPortfolios } from "@/services/api";
 import { toast  } from 'react-hot-toast';
@@ -17,6 +18,9 @@ export default function TopBar() {
   const [portfolios, setPortfolios] = useState([]);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [selectedPortfolio, setSelectedPortfolio] = useState(ALL_PORTFOLIOS);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const menuRef = useRef(null);
 
   useEffect(() => {
     setSelectedPortfolio(getStoredPortfolioId());
@@ -32,6 +36,7 @@ export default function TopBar() {
 
         const portfolioResponse = await getUserPortfolios();
         const userPortfolios = portfolioResponse.portfolios || [];
+        console.log(userPortfolios);
         setPortfolios(userPortfolios);
 
         // Ensure the selected portfolio exists; fall back to first portfolio or "all"
@@ -41,13 +46,6 @@ export default function TopBar() {
 
         if (storedSelection !== ALL_PORTFOLIOS && !validIds.includes(storedSelection)) {
           resolvedSelection = userPortfolios.length ? String(userPortfolios[0].id) : ALL_PORTFOLIOS;
-        }
-
-        if (resolvedSelection !== selectedPortfolio) {
-          setSelectedPortfolio(resolvedSelection);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('selectedPortfolioId', resolvedSelection);
-          }
         }
       } catch (error) {
         console.error(error);
@@ -74,6 +72,36 @@ export default function TopBar() {
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
+  const profileMenuItems = [
+    { href: '/profile/settings', label: 'Profile settings' },
+    { href: '/tax/settings', label: 'Tax settings' },
+    { href: '/portfolios', label: 'Portfolios' },
+    { href: '/portfolios/new', label: 'Add Portfolio' },
+    { href: '/accounts/logout', label: 'Log out' },
+  ];
+
   return (
     <header className="topbar">
       <div className="topbar-title">Portfolio Dashboard</div>
@@ -98,12 +126,41 @@ export default function TopBar() {
             ))}
           </select>
         </div>
-        <div>
-          {userLoading
-            ? 'Checking login...'
-            : user
-              ? `Logged in as: ${user.username} (${new Date().toDateString()})` 
-              : 'Not logged in'}
+        <div className="d-flex align-items-center gap-2">
+          <span>
+            {userLoading
+              ? 'Checking login...'
+              : user
+                ? `Logged in as: `
+                : 'Not logged in'}
+          </span>
+          <div className="dropdown" ref={menuRef}>
+            <button
+              type="button"
+              className="btn btn-outline-light btn-sm dropdown-toggle"
+              onClick={() => setProfileMenuOpen((prev) => !prev)}
+              aria-expanded={profileMenuOpen}
+            >
+              {user?.username || 'Profile menu'}
+            </button>
+            {profileMenuOpen && (
+              <div
+                className="dropdown-menu dropdown-menu-end show"
+                style={{ minWidth: '220px' }}
+              >
+                {profileMenuItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    className="dropdown-item"
+                    href={item.href}
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
