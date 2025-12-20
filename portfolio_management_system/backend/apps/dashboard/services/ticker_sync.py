@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Tuple
 import datetime
 
 import pandas as pd
@@ -138,42 +138,87 @@ def ensure_ticker(symbol: str) -> Optional[Ticker]:
     ticker_obj.save()
     return ticker_obj
 
+def _is_market_open_day(d: date) -> bool:
+    # Simple weekday rule (Mon-Fri). Replace with your exchange calendar if needed.
+    return d.weekday() < 5
 
-def _window_for_refresh(ticker_obj: Ticker, today: date) -> tuple[Optional[date], Optional[date]]:
-    """
-    Determine the start/end window that should be refreshed for the ticker.
+def _window_for_refresh(ticker_obj: "Ticker", today: date) -> Tuple[Optional[date], Optional[date]]:
+    # Refresh txn bounds from DB (in case caller has stale instance)
+    tkr = type(ticker_obj).objects.get(symbol=ticker_obj.symbol)
 
-    Logic:
-    - If no historical rows exist, fetch from first_txn (or default 1 year) to today.
-    - If data exists but starts after first_txn, backfill from first_txn.
-    - If latest stored date is before today, fetch from the day after the last row.
-    - Otherwise, no refresh is needed.
+    first_txn = tkr.first_txn
+    last_txn = tkr.last_txn
 
-    - Fetch only missing historical windows, avoiding already-stored past days.
-    - If the latest stored row is today, allow a same-day refresh window for
-      intraday updates (throttled separately).
-    """
+    # Expected historical range:
+    expected_start = first_txn or (today - timedelta(days=365))
+    expected_end = last_txn or today
 
-    tkr = Ticker.objects.get(symbol=ticker_obj.symbol)
+    # If expected_end is before expected_start (bad data), do nothing
+    if expected_end and expected_start and expected_end < expected_start:
+        return None, None
 
-    min_date = tkr.first_txn
-    expected_start = min_date or (today - timedelta(days=365))
+    qs = ticker_obj.historical_data.all()
 
-    first_row = ticker_obj.historical_data.order_by("date").first()
-    last_row = ticker_obj.historical_data.order_by("-date").first()
+    first_row = qs.order_by("date").first()
+    last_row = qs.order_by("-date").first()
 
+    # 1) No historical rows -> fetch full expected historical range
     if not last_row:
-        return expected_start, today
+        return expected_start, expected_end
 
+    # ---- Helper: find first missing contiguous block inside [expected_start, expected_end] ----
+    def first_missing_block(start_d: date, end_d: date) -> Tuple[Optional[date], Optional[date]]:
+        if end_d < start_d:
+            return None, None
+
+        stored = set(
+            qs.filter(date__gte=start_d, date__lte=end_d).values_list("date", flat=True)
+        )
+
+        # Scan calendar days but only consider market-open days as "required"
+        d = start_d
+        while d <= end_d:
+            if _is_market_open_day(d) and d not in stored:
+                block_start = d
+                block_end = d
+                d2 = d + timedelta(days=1)
+                while d2 <= end_d:
+                    if _is_market_open_day(d2) and d2 not in stored:
+                        block_end = d2
+                        d2 += timedelta(days=1)
+                        continue
+                    break
+                return block_start, block_end
+            d += timedelta(days=1)
+
+        return None, None
+
+    # 2) If data exists but starts after first_txn (or expected_start), backfill head
     if first_row and expected_start < first_row.date:
-        backfill_end = first_row.date - timedelta(days=1)
-        if expected_start <= backfill_end:
-            return expected_start, backfill_end
+        head_end = min(expected_end, first_row.date - timedelta(days=1))
+        if expected_start <= head_end:
+            # Avoid already-stored past days: only fetch missing days in this head window
+            s, e = first_missing_block(expected_start, head_end)
+            if s and e:
+                return s, e
 
+    # 3) If data is missed between expected_start and expected_end, fill gaps (avoid stored past days)
+    gap_start = max(expected_start, first_row.date if first_row else expected_start)
+    gap_end = min(expected_end, last_row.date if last_row else expected_end)
+    s, e = first_missing_block(gap_start, gap_end)
+    if s and e:
+        return s, e
+
+    # 4) If today is market open day and latest stored date is before today, fetch forward to today
     latest_date = last_row.date
-    if latest_date < today:
-        return latest_date + timedelta(days=1), today
+    if _is_market_open_day(today) and latest_date < today:
+        # Avoid already-stored past days by starting at next day after latest_date
+        forward_start = max(latest_date + timedelta(days=1), expected_start)
+        forward_end = today
+        if forward_start <= forward_end:
+            return forward_start, forward_end
 
+    # 5) If latest stored row is today, allow same-day refresh window (intraday updates)
     if latest_date == today:
         return today, today
 
@@ -219,7 +264,6 @@ def refresh_ticker_history(symbols: Iterable[str]) -> List[SyncResult]:
     """
     Ensure Ticker and TickerData tables are populated for the provided symbols.
     """
-
     today = date.today()
     results: List[SyncResult] = []
     seen = set()

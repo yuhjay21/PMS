@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Iterable, List
 
 from celery import shared_task
-from django.core.cache import cache
 from django.db.models import Q
 
 from apps.dashboard.models import StockHolding, Ticker
 from apps.dashboard.services.market_schedule import (
-    REFRESH_LOCK_CACHE_KEY,
+    acquire_refresh_lock,
     get_last_refresh,
     market_now,
+    release_refresh_lock,
     record_last_refresh,
     schedule_market_refresh_if_needed,
     should_refresh_market_data,
@@ -33,21 +33,20 @@ def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
         last_refresh,
         now=now,
         allow_closed_catch_up=True,
-    ):
+    ):  
         return {
             "skipped": True,
             "reason": "data is fresh",
             "last_refresh": last_refresh.isoformat() if last_refresh else None,
         }
-
-    if not cache.add(REFRESH_LOCK_CACHE_KEY, trigger_reason, timeout=120):
+    
+    if not acquire_refresh_lock(trigger_reason=trigger_reason, timeout_seconds=120):
         return {"skipped": True, "reason": "another refresh is already running"}
 
     try:
         symbols = _tracked_asx_symbols()
         if not symbols:
             return {"skipped": True, "reason": "no ASX symbols configured"}
-
         results = refresh_ticker_history(symbols)
         updated = [res.symbol for res in results if res.updated]
         skipped = [res.symbol for res in results if not res.updated and res.error is None]
@@ -63,14 +62,13 @@ def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
             "last_refresh": now.isoformat(),
         }
     finally:
-        cache.delete(REFRESH_LOCK_CACHE_KEY)
+        release_refresh_lock()
 
 
 def _tracked_asx_symbols() -> List[str]:
     """Return the list of ASX symbols we actively track."""
     holding_symbols: Iterable[str] = (
-        StockHolding.objects.filter(number_of_shares__gt=0)
-        .filter(Q(company_symbol__iendswith=".AX") | Q(Exchange="ASX"))
+        StockHolding.objects.filter(Q(company_symbol__iendswith=".AX") | Q(Exchange="ASX"))
         .values_list("company_symbol", flat=True)
         .distinct()
     )

@@ -55,7 +55,6 @@ class LoginAPI(APIView):
             )
 
         user = login(request, user)
-        print(user)
         return Response({"detail": "Login successful."}, status=status.HTTP_200_OK)
 
 

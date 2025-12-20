@@ -10,21 +10,34 @@ async function apiFetch(path, options = {}) {
     ...options,
   });
 
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {}
+
   if (!res.ok) {
-    let msg = `Request failed with status ${res.status}`;
-    try {
-      const data = await res.json();
-      if (data?.error) msg = data.error;
-    } catch (e) {}
+    const msg =
+      data?.detail ||            // 👈 DRF standard
+      data?.error ||
+      `Request failed with status ${res.status}`;
     throw new Error(msg);
   }
-  return res.json();
+
+  return data;
 }
 
 // Dashboard endpoints
-export function getDashboardHoldings(portfolio = 'all') {
+export async function getDashboardHoldings(portfolio = 'all') {
   const params = new URLSearchParams({ portfolio });
-  return apiFetch(`/api/v1/dashboard/holdings/?${params.toString()}`);
+  try {
+    const response = await apiFetch(`/api/v1/dashboard/holdings/?${params.toString()}`);
+    return response 
+  } catch (err){
+    if (err.message =="No Portfolio Exist for this user"){
+      throw new Error("NO PORTFOLIO Exists");
+    }
+    throw err;
+  }
 }
 
 export function getPortfolioPerformance(timeframe = '3m', portfolio = 'all') {

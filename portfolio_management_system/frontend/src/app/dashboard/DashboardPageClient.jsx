@@ -378,8 +378,13 @@ export default function DashboardPageClient() {
         const json = await getDashboardHoldings(selectedPortfolio || ALL_PORTFOLIOS);
         if (!isCancelled) setData(json);
       } catch (e) {
-        console.error(e);
-        if (!isCancelled) toast.error('Failed to load dashboard data.');
+        if (!isCancelled) {
+          if( e.message=="NO PORTFOLIO Exists") {
+            //toast.error('No Portfolio Exists for this User. Please create a Portfolio First');
+            setSelectedPortfolio(null);
+          }
+          else {toast.error('Failed to load dashboard data.');}
+        }
       } finally {
         if (!isCancelled) setLoading(false);
       }
@@ -460,6 +465,19 @@ export default function DashboardPageClient() {
               <span className="visually-hidden">Loading dashboard…</span>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+  
+
+
+  if (!selectedPortfolio) {
+    return (
+      <div className="page-content">
+        <div className="container-fluid">
+          <p className="text-center fs-3">No Portfolio Exist for this User</p>
+          <p className="text-center fs-5">Please create a Portfolio First.</p>
         </div>
       </div>
     );

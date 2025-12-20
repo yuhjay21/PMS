@@ -4,9 +4,11 @@ services:
     image: postgres:15
     restart: always
     environment:
+      POSTGRES_HOST: db
       POSTGRES_DB: portfolio_db
       POSTGRES_USER: pms_user
       POSTGRES_PASSWORD: PMS_DB_PS123
+      POSTGRES_PORT: 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -64,18 +66,18 @@ services:
 
   frontend:
     command: npm run dev
-    volumes:
-      - ./frontend:/app
-    # develop:
-    #   watch:
-    #     - action : sync+restart
-    #       path : ./frontend
-    #       target: /app
-    #       initial_sync: true
-    #       ignore:
-    #         - node_modules/
-    #     - action: rebuild
-    #       path: ./frontend/package.json
+    # volumes:
+    #   - ./frontend:/app
+    develop:
+      watch:
+        - action : sync+restart
+          path : ./frontend
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./frontend/package.json
     environment:
       - DEBUG=1
       - API_BASE=http://backend:8000

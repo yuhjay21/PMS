@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from django.core.cache import cache
 
 from apps.dashboard.models import Portfolio, StockHolding, transaction, deposit
 from apps.dashboard.api.serializers.holdings import HoldingSerializer
@@ -28,6 +29,8 @@ class DashboardHoldingsAPI(APIView):
 
     def get(self, request):
         # --- Update historical data (side-effect as in original view) ---
+        cache.delete("market:last_refresh")
+        cache.delete("market:refresh:lock")
         schedule_market_refresh_if_needed(
             trigger_reason="dashboard-load",
             allow_closed_catch_up=True,
@@ -38,6 +41,9 @@ class DashboardHoldingsAPI(APIView):
 
         # --- Get all portfolios for user ---
         user_portfolios = Portfolio.objects.filter(user=request.user)
+        
+        if not user_portfolios.exists():
+            return Response({"detail": "No Portfolio Exist for this user"}, status=status.HTTP_404_NOT_FOUND)
 
         # --- Determine if showing combined or single portfolio ---
         if selected_portfolio_id and selected_portfolio_id != "all":
@@ -70,7 +76,6 @@ class DashboardHoldingsAPI(APIView):
 
         # Unique symbols with > 0 shares
         symbols = list({c['company_symbol'] for c in holding_companies if c['total_shares'] > 0})
-
         # --- Dates & prices ---
         today, yesterday = weekday_dates()
 
@@ -143,6 +148,7 @@ class DashboardHoldingsAPI(APIView):
                     market_price = c['avg_ltp'] or 0
                 else:
                     c['avg_ltp'] = market_price
+
                     for each_holding in holding_qs:
                         try:
                             holding_qs.update(LTP=market_price)

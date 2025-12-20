@@ -1,5 +1,5 @@
 from django.contrib import admin, messages
-from apps.dashboard.models import Portfolio, StockHolding, transaction, deposit, AppSecret, Ticker, TickerData
+from apps.dashboard.models import Portfolio, StockHolding, transaction, deposit, AppSecret, Ticker, TickerData, MarketRefreshState
 
 
 def reset_model_data(modeladmin, request, queryset):
@@ -49,3 +49,8 @@ class TickerDataAdmin(admin.ModelAdmin):
     list_filter = ('ticker','date')
     search_fields = ("ticker",)
     actions = [reset_model_data]
+
+
+@admin.register(MarketRefreshState)
+class MarketRefreshStateAdmin(admin.ModelAdmin):
+    list_display = ('last_refresh',"refresh_lock_reason",'refresh_lock_acquired_at','refresh_lock_expires_at')

@@ -27,6 +27,15 @@ def normalize_symbols(symbols: SymbolLike) -> List[str]:
             cleaned.append(s)
     return cleaned
 
+def get_symbols_with_Exchange(symbols: SymbolLike) -> List[str]:
+    if isinstance(symbols, str):
+        symbols = [symbols]
+    
+    return list(
+        Ticker.objects
+        .filter(ticker__in=symbols)
+        .values_list("symbol", flat=True)
+    )
 
 def get_prices(
     symbols: SymbolLike,
@@ -69,9 +78,9 @@ def get_prices(
     if start is None:
         # default start 2000-01-01
         start = date(2000, 1, 1)
-
+    
     # Fetch tickers for the requested symbols
-    tickers = Ticker.objects.filter(symbol__in=symbols_list)
+    tickers = Ticker.objects.filter(ticker__in=symbols_list)
 
     if not tickers.exists():
         # No tickers in DB yet → return empty in the expected shape
@@ -95,7 +104,6 @@ def get_prices(
         )
         .order_by("ticker", "date")
     )
-
     # Convert queryset to DataFrame
     records = []
     for d in data_qs:
@@ -166,6 +174,7 @@ def get_prices(
         )
         df = df.set_index("Date")
 
+
     # -----------------------------
     # Format Output (yfinance style)
     # -----------------------------
@@ -179,7 +188,11 @@ def get_prices(
     else:
         # Multiple symbols → MultiIndex columns (symbol, field)
         frames = []
-        for s in symbols_list:
+
+        updated_symbols = get_symbols_with_Exchange(symbols_list)
+
+        for s in updated_symbols:
+
             if "symbol" in df.columns:
                 sub = df[df["symbol"] == s]
             else:
@@ -199,4 +212,5 @@ def get_prices(
                 )
 
         multi_df = pd.concat(frames, axis=1, keys=symbols_list)
+
         return multi_df.sort_index()

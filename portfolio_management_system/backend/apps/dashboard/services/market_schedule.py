@@ -10,16 +10,16 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.core.cache import cache
+
 from django.utils import timezone
+from django.db import transaction
+from apps.dashboard.models import MarketRefreshState
 
 MARKET_TZ = ZoneInfo(settings.TIME_ZONE)
 MARKET_OPEN = time(hour=10, minute=0)
 MARKET_CLOSE = time(hour=16, minute=10)
 
-LAST_REFRESH_CACHE_KEY = "market:last_refresh"
-REFRESH_LOCK_CACHE_KEY = "market:refresh:lock"
-REFRESH_LOCK_SECS = 60
+REFRESH_LOCK_SECS = 60*5
 DEFAULT_MAX_AGE_MINUTES = 15
 
 
@@ -28,13 +28,13 @@ def market_now() -> datetime:
     return timezone.now().astimezone(MARKET_TZ)
 
 
-def _as_datetime(value: Optional[str]) -> Optional[datetime]:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value).astimezone(MARKET_TZ)
-    except Exception:
-        return None
+def _get_refresh_state(*, for_update: bool = False) -> MarketRefreshState:
+    query = MarketRefreshState.objects
+    if for_update:
+        query = query.select_for_update()
+
+    state, _ = query.get_or_create(pk=1)
+    return state
 
 
 def last_trading_day(reference: datetime) -> datetime.date:
@@ -77,12 +77,56 @@ def is_market_open(moment: Optional[datetime] = None) -> bool:
 
 
 def get_last_refresh() -> Optional[datetime]:
-    return _as_datetime(cache.get(LAST_REFRESH_CACHE_KEY))
+    last_refresh = _get_refresh_state().last_refresh
+    return last_refresh.astimezone(MARKET_TZ) if last_refresh else None
 
 
 def record_last_refresh(moment: Optional[datetime] = None) -> None:
     moment = moment or market_now()
-    cache.set(LAST_REFRESH_CACHE_KEY, moment.isoformat(), timeout=None)
+    
+    state = _get_refresh_state(for_update=True)
+    state.last_refresh = moment
+    state.save(update_fields=["last_refresh"])
+
+
+def acquire_refresh_lock(*, trigger_reason: str, timeout_seconds: int) -> bool:
+    now = market_now()
+    expires_at = now + timedelta(seconds=timeout_seconds)
+
+    with transaction.atomic():
+        state = _get_refresh_state(for_update=True)
+
+        if state.refresh_lock_expires_at and state.refresh_lock_expires_at > now:
+            return False
+
+        state.refresh_lock_reason = trigger_reason
+        state.refresh_lock_acquired_at = now
+        state.refresh_lock_expires_at = expires_at
+        state.save(
+            update_fields=[
+                "refresh_lock_reason",
+                "refresh_lock_acquired_at",
+                "refresh_lock_expires_at",
+            ]
+        )
+
+    return True
+
+
+def release_refresh_lock() -> None:
+    with transaction.atomic():
+        state = _get_refresh_state(for_update=True)
+
+        state.refresh_lock_reason = None
+        state.refresh_lock_acquired_at = None
+        state.refresh_lock_expires_at = None
+        state.save(
+            update_fields=[
+                "refresh_lock_reason",
+                "refresh_lock_acquired_at",
+                "refresh_lock_expires_at",
+            ]
+        )
 
 
 def should_refresh_market_data(
@@ -130,8 +174,8 @@ def schedule_market_refresh_if_needed(
     """
     Queue a background market refresh if conditions require it.
 
-    Uses a short-lived cache lock to avoid flooding Celery when multiple
-    requests arrive simultaneously.
+    Uses a short-lived database-backed lock to avoid flooding Celery when
+    multiple requests arrive simultaneously.
     """
     now = market_now()
     last_refresh = get_last_refresh()
@@ -144,12 +188,14 @@ def schedule_market_refresh_if_needed(
     ):
         return None
 
-    if not cache.add(REFRESH_LOCK_CACHE_KEY, trigger_reason, REFRESH_LOCK_SECS):
+    if not acquire_refresh_lock(
+        trigger_reason=trigger_reason, timeout_seconds=REFRESH_LOCK_SECS
+    ):
         return None
 
     # Avoid import cycles by importing the task lazily
     from apps.dashboard.tasks.market_tasks import capture_asx_market_snapshot
-
+    
     result = capture_asx_market_snapshot.apply_async(
         kwargs={"trigger_reason": trigger_reason}
     )

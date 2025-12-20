@@ -103,6 +103,14 @@ class Ticker(models.Model):
     def __str__(self):
       return self.symbol
 
+class MarketRefreshState(models.Model):
+    last_refresh = models.DateTimeField(null=True, blank=True)
+    refresh_lock_reason = models.CharField(max_length=50, null=True, blank=True)
+    refresh_lock_acquired_at = models.DateTimeField(null=True, blank=True)
+    refresh_lock_expires_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return "Market refresh state"
 
 class TickerData(models.Model):
   
