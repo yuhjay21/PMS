@@ -6,10 +6,10 @@ from typing import Iterable, List, Union, Optional
 import pandas as pd
 
 from ..models import Ticker, TickerData
+from apps.dashboard.constants import Index_Symbol
 
 
 SymbolLike = Union[str, Iterable[str]]
-
 
 def normalize_symbols(symbols: SymbolLike) -> List[str]:
     """
@@ -81,7 +81,6 @@ def get_prices(
     
     # Fetch tickers for the requested symbols
     tickers = Ticker.objects.filter(ticker__in=symbols_list)
-
     if not tickers.exists():
         # No tickers in DB yet → return empty in the expected shape
         if len(symbols_list) == 1:
@@ -104,6 +103,7 @@ def get_prices(
         )
         .order_by("ticker", "date")
     )
+
     # Convert queryset to DataFrame
     records = []
     for d in data_qs:
@@ -174,12 +174,15 @@ def get_prices(
         )
         df = df.set_index("Date")
 
-
     # -----------------------------
     # Format Output (yfinance style)
     # -----------------------------
     if len(symbols_list) == 1:
         symbol = symbols_list[0]
+
+        if Index_Symbol in symbols_list:
+            symbol = symbol+".AX"
+
         # Defensive: handle case where symbol has no rows in df
         sym_df = df[df["symbol"] == symbol] if "symbol" in df.columns else df
         out = sym_df[["Open", "High", "Low", "Close", "Volume"]]

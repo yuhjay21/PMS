@@ -48,7 +48,7 @@ export default function RegisterPage() {
         }),
       });
       if (!res.ok) {
-        console.log(res);
+
         let msg = 'Registration failed.';
         try {
           const data = await res.json();

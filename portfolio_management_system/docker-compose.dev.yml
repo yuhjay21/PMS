@@ -70,7 +70,7 @@ services:
     #   - ./frontend:/app
     develop:
       watch:
-        - action : sync+restart
+        - action : sync
           path : ./frontend
           target: /app
           initial_sync: true

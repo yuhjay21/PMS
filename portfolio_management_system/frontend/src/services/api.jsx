@@ -52,8 +52,9 @@ export async function getDashboardHoldings(portfolio = 'all') {
   }
 }
 
-export function getPortfolioPerformance(timeframe = '3m', portfolio = 'all') {
+export async function getPortfolioPerformance(timeframe = '3m', portfolio = 'all') {
   const params = new URLSearchParams({ timeframe, portfolio });
+  console.log("HERE");
   return apiFetch(`/api/v1/dashboard/performance/?${params.toString()}`);
 }
 

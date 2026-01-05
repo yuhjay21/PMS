@@ -4,10 +4,11 @@ from typing import Iterable, List
 
 from celery import shared_task
 from django.db.models import Q
-
+from apps.dashboard.constants import Index_Symbol
 from apps.dashboard.models import StockHolding, Ticker
 from apps.dashboard.services.market_schedule import (
     acquire_refresh_lock,
+    REFRESH_LOCK_SECS,
     get_last_refresh,
     market_now,
     release_refresh_lock,
@@ -40,14 +41,17 @@ def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
             "reason": "data is fresh",
             "last_refresh": last_refresh.isoformat() if last_refresh else None,
         }
-    # if not acquire_refresh_lock(trigger_reason=trigger_reason, timeout_seconds=120):
-    #     return {"skipped": True, "reason": "Refresh done within timeout seconds"}
+    if not acquire_refresh_lock(trigger_reason=trigger_reason, timeout_seconds=REFRESH_LOCK_SECS):
+        return {"skipped": True, "reason": "Refresh done within timeout seconds"}
 
     try:
         symbols = _tracked_asx_symbols()
-        print(symbols)
         if not symbols:
             return {"skipped": True, "reason": "no ASX symbols configured"}
+        if Index_Symbol+".AX" not in symbols:
+            symbols.append(Index_Symbol)
+        
+        print(symbols)
         results = refresh_ticker_history(symbols)
         updated = [res.symbol for res in results if res.updated]
         skipped = [res.symbol for res in results if not res.updated and res.error is None]
@@ -63,6 +67,7 @@ def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
             "last_refresh": now.isoformat(),
         }
     finally:
+        
         release_refresh_lock()
 
 
@@ -80,7 +85,7 @@ def _tracked_asx_symbols() -> List[str]:
         .distinct()
     )
 
-    merged = list({*holding_symbols, *ticker_symbols})
+    merged = list({ *ticker_symbols,*holding_symbols })
     return [s for s in merged if s]
 
 

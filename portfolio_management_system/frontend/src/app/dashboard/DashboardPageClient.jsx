@@ -1,10 +1,13 @@
 'use client';
 
 import '@/styles/globals.css';
-import { useEffect, useState, useRef, useMemo  } from 'react';
-import { toast  } from 'react-hot-toast';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { toast } from 'react-hot-toast';
 import { getCurrentUser } from "@/lib/auth";
-import { getDashboardHoldings } from "@/services/api";
+import { getDashboardHoldings, getPortfolioPerformance } from "@/services/api";
+import PortfolioPerformanceChart from '@/components/charts/PortfolioPerformanceChart';
+import PortfolioValueChart from '@/components/charts/PortfolioValueChart';
+import SectorAllocationChart from '@/components/charts/SectorAllocationChart';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -282,6 +285,8 @@ export default function DashboardPageClient() {
   const [user, setUser] = useState(null);
   const [selectedPortfolio, setSelectedPortfolio] = useState(ALL_PORTFOLIOS);
   const [filterOpenOnly, setFilterOpenOnly] = useState(false);
+  const [performanceData, setPerformanceData] = useState(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
 
   const tableRef = useRef(null);
   const footerRef = useRef(null);
@@ -337,7 +342,6 @@ export default function DashboardPageClient() {
       });
 
       const data = await res.json();
-      console.log(data);
       alert(data.message || 'Upload finished');
     } catch (err) {
       console.error(err);
@@ -370,6 +374,7 @@ export default function DashboardPageClient() {
 
   }, []);
 
+
   useEffect(() => {
     let isCancelled = false;
     async function fetchDashboard() {
@@ -396,6 +401,41 @@ export default function DashboardPageClient() {
     };
   }, [selectedPortfolio]);
   
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function fetchPerformance() {
+      setPerformanceLoading(true);
+      
+      try {
+        const response = await getPortfolioPerformance(
+          timeframe,
+          selectedPortfolio || ALL_PORTFOLIOS
+        );
+
+        console.log(response);
+
+        if (!isCancelled) setPerformanceData(response);
+      } catch (e) {
+        if (!isCancelled) {
+          setPerformanceData(null);
+          console.log(e.message);
+          toast.error('Failed to load performance chart.');
+        }
+      } finally {
+        if (!isCancelled) setPerformanceLoading(false);
+      }
+    }
+
+    if (selectedPortfolio) {
+      fetchPerformance();
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedPortfolio, timeframe]);
+
   useEffect(() => {
     if (!tableRef.current || !footerRef.current) return;
 
@@ -453,6 +493,47 @@ export default function DashboardPageClient() {
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
+  const summary = data || {};
+  const holdings = summary.holdings || [];
+  const filteredHoldings = showOpenOnly
+    ? holdings.filter((h) => h["NumberShares"] > 0)
+    : holdings;
+  const transactions = summary.transactions || [];
+
+  const performanceTitle =
+    valueMode === 'Value'
+      ? 'Portfolio Value vs ASX200'
+      : valueMode === 'PnL'
+      ? 'Portfolio PnL Analysis vs ASX200'
+      : 'Portfolio Performance vs ASX200';
+  //console.log(data);
+
+  const toAllocationMap = (allocation) => {
+    if (!Array.isArray(allocation) || allocation.length < 2) return {};
+    const [values, labels] = allocation;
+    return labels.reduce((acc, label, index) => {
+      acc[label] = values[index] ?? 0;
+      return acc;
+    }, {});
+  };
+
+  const accountAllocation = useMemo(
+    () => ({
+      Cash: summary.total_cash ?? 0,
+      Investments: summary.Total_Value ?? 0,
+    }),
+    [summary.total_cash, summary.Total_Value]
+  );
+  const sectorAllocation = useMemo(
+    () => toAllocationMap(summary.sectors),
+    [summary.sectors]
+  );
+  const stockAllocation = useMemo(
+    () => toAllocationMap(summary.stocks),
+    [summary.stocks]
+  );
+
+
   if (loading) {
     return (
       <div className="page-content">
@@ -469,8 +550,6 @@ export default function DashboardPageClient() {
       </div>
     );
   }
-  
-
 
   if (!selectedPortfolio) {
     return (
@@ -492,24 +571,6 @@ export default function DashboardPageClient() {
       </div>
     );
   }
-  
-  
-  const summary = data;
-  const holdings = summary.holdings || [];
-  const filteredHoldings = showOpenOnly
-  ? holdings.filter((h) => h["NumberShares"] > 0)
-  : holdings;
-  const transactions = summary.transactions || [];
-
-  const performanceTitle =
-    valueMode === 'Value'
-      ? 'Portfolio Value vs ASX200'
-      : valueMode === 'PnL'
-      ? 'Portfolio PnL Analysis vs ASX200'
-      : 'Portfolio Performance vs ASX200';
-  //console.log(data);
-  
-
 
   return (
     <div className="page-content">
@@ -703,65 +764,55 @@ export default function DashboardPageClient() {
                   </div>
                 </div>
 
-                {/* Chart placeholder – plug React Chart.js here if you want */}
-                <div style={{ position: 'relative' }}>
-                  <canvas
-                    id="portfolioPerformanceChart"
-                    style={{ height: 350, maxHeight: 350, width: '100%' }}
-                  />
-                  <div
-                    id="PerformanceSpinner"
-                    className="d-none justify-content-center align-items-center"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      zIndex: 10,
-                    }}
-                  >
+                <div style={{ position: 'relative', minHeight: 350 }}>
+                  {performanceLoading ? (
                     <div
-                      className="spinner-border text-dark"
-                      role="status"
-                      style={{ width: '3rem', height: '3rem' }}
+                      className="d-flex justify-content-center align-items-center"
+                      style={{ minHeight: 350 }}
                     >
-                      <span className="visually-hidden">Loading…</span>
+                      <div
+                        className="spinner-border text-dark"
+                        role="status"
+                        style={{ width: '3rem', height: '3rem' }}
+                      >
+                        <span className="visually-hidden">Loading…</span>
+                      </div>
                     </div>
-                  </div>
+                  ) : performanceData ? (
+                    valueMode === 'Value' ? (
+                      <PortfolioValueChart
+                        data={performanceData}
+                        dataKey="portfolio_value"
+                        label="Portfolio Value"
+                      />
+                    ) : valueMode === 'PnL' ? (
+                      <PortfolioValueChart
+                        data={performanceData}
+                        dataKey="pnl"
+                        label="Portfolio PnL"
+                      />
+                    ) : (
+                      <PortfolioPerformanceChart data={performanceData} />
+                    )
+                  ) : (
+                    <p className="text-muted mb-0">No performance data.</p>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+
         {/* === 3 donut charts row === */}
         <div className="row mb-3">
           {/* Account */}
           <div className="col-md-4 col-sm-12 mb-3">
-            <div className="card shadow mh-100">
+            <div className="card shadow mh-75">
               <div className="card-body d-flex flex-column align-items-center position-relative">
                 <h5 className="text-center fw-bold mb-3">Account</h5>
-                <canvas id="account-chart-container" className="mh-75 mw-50" />
-                <div
-                  id="AccountSpinner"
-                  className="d-none justify-content-center align-items-center"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 10,
-                  }}
-                >
-                  <div
-                    className="spinner-grow text-dark"
-                    role="status"
-                    style={{ width: '3rem', height: '3rem' }}
-                  >
-                    <span className="visually-hidden">Loading…</span>
-                  </div>
+                <div style={{ width: '100%' }}>
+                  <SectorAllocationChart sectors={accountAllocation} />
                 </div>
               </div>
             </div>
@@ -769,29 +820,11 @@ export default function DashboardPageClient() {
 
           {/* Sectors */}
           <div className="col-md-4 col-sm-12 mb-3">
-            <div className="card shadow mh-100">
+            <div className="card shadow mh-75">
               <div className="card-body d-flex flex-column align-items-center position-relative">
                 <h5 className="text-center fw-bold mb-3">Sectors</h5>
-                <canvas id="sector-chart-container" className="mh-75 mw-50" />
-                <div
-                  id="SectorSpinner"
-                  className="d-none justify-content-center align-items-center"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 10,
-                  }}
-                >
-                  <div
-                    className="spinner-grow text-dark"
-                    role="status"
-                    style={{ width: '3rem', height: '3rem' }}
-                  >
-                    <span className="visually-hidden">Loading…</span>
-                  </div>
+                <div style={{ width: '100%' }}>
+                  <SectorAllocationChart sectors={sectorAllocation} />
                 </div>
               </div>
             </div>
@@ -799,29 +832,11 @@ export default function DashboardPageClient() {
 
           {/* Stocks */}
           <div className="col-md-4 col-sm-12 mb-3">
-            <div className="card shadow mh-100">
+            <div className="card shadow mh-75">
               <div className="card-body d-flex flex-column align-items-center position-relative">
                 <h5 className="text-center fw-bold mb-3">Stocks</h5>
-                <canvas id="stock-chart-container" className="mh-75 mw-50" />
-                <div
-                  id="StockSpinner"
-                  className="d-none justify-content-center align-items-center"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 10,
-                  }}
-                >
-                  <div
-                    className="spinner-grow text-dark"
-                    role="status"
-                    style={{ width: '3rem', height: '3rem' }}
-                  >
-                    <span className="visually-hidden">Loading…</span>
-                  </div>
+                <div style={{ width: '100%' }}>
+                  <SectorAllocationChart sectors={stockAllocation} />
                 </div>
               </div>
             </div>
@@ -1482,7 +1497,8 @@ export default function DashboardPageClient() {
               </div>
             </div>
           </div>
-
+          
+          
         </div>
         {/* end modals */}
       </div>

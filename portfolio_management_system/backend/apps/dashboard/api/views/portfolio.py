@@ -67,6 +67,20 @@ class UserPortfoliosAPI(APIView):
             status=status.HTTP_201_CREATED,
         ) 
 
+def json_safe_float(v, default=0.0):
+    try:
+        v = float(v)
+        return v if math.isfinite(v) else default
+    except Exception:
+        return default
+
+def finite_or_zero(x):
+    try:
+        x = float(x)
+        return x if math.isfinite(x) else 0.0
+    except Exception:
+        return 0.0
+
 class DashboardHoldingsAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -77,7 +91,6 @@ class DashboardHoldingsAPI(APIView):
             trigger_reason="dashboard-load",
             allow_closed_catch_up=True,
         )
-
         # --- Get selected portfolio ID from GET params ---
         selected_portfolio_id = request.GET.get("portfolio")
 
@@ -168,8 +181,8 @@ class DashboardHoldingsAPI(APIView):
             average_cost = c['weighted_avg_buy_price'] or 0
             pk = c['id']
 
-            market_price = latest_prices.get(company_symbol, 0) or latest_prices.get(company_symbol+"."+exchange, 0) or 0
-            prev_market_price = yesterday_prices.get(company_symbol, 0) or yesterday_prices.get(company_symbol+"."+exchange, 0) or 0
+            market_price = finite_or_zero(latest_prices.get(company_symbol, 0) or latest_prices.get(company_symbol+"."+exchange, 0) or 0)
+            prev_market_price = finite_or_zero(yesterday_prices.get(company_symbol, 0) or yesterday_prices.get(company_symbol+"."+exchange, 0) or 0)
             
             # Query original individual holdings for LTP update
             holding_qs = StockHolding.objects.filter(
@@ -308,5 +321,8 @@ class DashboardHoldingsAPI(APIView):
             ],
             'selected_portfolio_id': selected_portfolio_id or "all",
         }
+
+        context["yesterday_PnL"] = json_safe_float(context["yesterday_PnL"])
+        context["y_current_growth"] = json_safe_float(context["y_current_growth"])
 
         return Response(context, status=status.HTTP_200_OK)

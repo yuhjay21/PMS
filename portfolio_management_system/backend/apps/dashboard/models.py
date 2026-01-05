@@ -58,7 +58,7 @@ class StockHolding(models.Model):
   LTP = models.FloatField(default=0)
 
   def __str__(self):
-    return str(self.portfolio.description) + " -> " + self.company_symbol + " " + str(self.number_of_shares)
+    return str(self.portfolio.name) + " -> " + self.company_symbol + " " + str(self.number_of_shares)
 
 
 class transaction(models.Model):

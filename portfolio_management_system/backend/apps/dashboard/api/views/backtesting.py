@@ -9,7 +9,11 @@ from apps.dashboard.services.backtest import run_backtest
 
 class BacktestingAPI(APIView):
     permission_classes = [IsAuthenticated]
+    
+    def get(self,request):
 
+        return Response("Test Done")
+    
     def post(self, request):
         serializer = BacktestRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

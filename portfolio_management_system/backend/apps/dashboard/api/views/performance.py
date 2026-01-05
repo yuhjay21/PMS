@@ -12,7 +12,7 @@ from apps.dashboard.models import Portfolio, transaction, deposit
 
 from apps.dashboard.services.market_data import get_prices
 from apps.dashboard.constants import Index_Symbol
-
+pd.set_option('display.max_columns', None)
 
 class PortfolioPerformanceAPI(APIView):
     """
@@ -27,7 +27,7 @@ class PortfolioPerformanceAPI(APIView):
     def get(self, request):
         global Index_Symbol
 
-        loc_Index_Symbol = Index_Symbol + ".AX"
+        loc_Index_Symbol = Index_Symbol
         selected_portfolio_id = request.GET.get("portfolio")
         timeframe = request.GET.get("timeframe", "3m")
 
@@ -84,7 +84,6 @@ class PortfolioPerformanceAPI(APIView):
             )
         )
         symbols.append(loc_Index_Symbol)
-
         # --- Market data (reuses your get_prices helper) ---
         data = get_prices(
             symbols, start=start_date, end=today + timedelta(days=5), interval=interval
@@ -101,7 +100,9 @@ class PortfolioPerformanceAPI(APIView):
         data = data.reindex(overlap)
         data.index.name = index_name
 
+        #data.dropna(axis=0, how='all', inplace=True)
         prices = data.xs("Close", level=1, axis=1).bfill()
+        prices = prices.infer_objects(copy=False)
 
         # --- Build daily portfolio value (CashValue, deposits, etc.) ---
         portfolio_value = pd.DataFrame(index=prices.index)
@@ -172,8 +173,15 @@ class PortfolioPerformanceAPI(APIView):
             div_sum = (
                 dividend_txns.aggregate(Sum("Total"))["Total__sum"] or 0
             )  # cash impact of dividends
-            cash_on_hand = (cash_sum + cumulative_sell_proceeds + div_sum) - cumulative_buy_cost
-
+            cash_on_hand = (cash_sum + cumulative_sell_proceeds ) - cumulative_buy_cost
+            # Testing Values
+            # portfolio_value.at[current_date, "OnHandCash"] = cash_on_hand
+            # portfolio_value.at[current_date, "cash_sum"] = cash_sum
+            # portfolio_value.at[current_date, "cumulative_sell_proceeds"] = cumulative_sell_proceeds
+            portfolio_value.at[current_date, "div_sum"] = div_sum
+            # portfolio_value.at[current_date, "cumulative_buy_cost"] = cumulative_buy_cost
+            
+            
             portfolio_value.at[current_date, "Value"] = day_value
             portfolio_value.at[current_date, "InitValue"] = init_value
             portfolio_value.at[current_date, "CashValue"] = day_value + cash_on_hand
@@ -188,10 +196,12 @@ class PortfolioPerformanceAPI(APIView):
 
         # --- Index benchmark (^AXJO) ---
         # Initial index value near PF_initial_date
+
         idx_df = get_prices(
             loc_Index_Symbol,
             start=PF_initial_date,
-            end=PF_initial_date + timedelta(days=5),
+            end=today + timedelta(days=5),
+            interval=interval
         )
         Index_init_value = idx_df.iloc[0]["Open"]
 
@@ -209,14 +219,19 @@ class PortfolioPerformanceAPI(APIView):
 
         portfolio_value["Index_value"] = prices[loc_Index_Symbol]
         portfolio_value.ffill(inplace=True)
+        portfolio_value["pnl_index"] = (
+            portfolio_value["Index_value"]
+        ).diff().fillna(0).round(2)
 
         portfolio_value = portfolio_value.reset_index()
         portfolio_value["Date"] = portfolio_value["Date"].astype(str)
-
+        print(portfolio_value)
         return Response(
             {
                 "dates": portfolio_value["Date"].tolist(),
                 "portfolio": portfolio_value["Portfolio"].tolist(),
+                "div_sum": portfolio_value["Date"].tolist(),
+                "pnl_index": portfolio_value["Date"].tolist(),
                 "portfolio_value": portfolio_value["CashValue"].tolist(),
                 "pnl": portfolio_value["pnl"].tolist(),
                 "index": portfolio_value["Index_%"].tolist(),

@@ -8,12 +8,33 @@ def reset_model_data(modeladmin, request, queryset):
     messages.success(request, "The database has been reset (all records deleted).")
 reset_model_data.short_description = "Reset YourModel database (deletes all records)"
 
+def reset_portfolio(modeladmin, request, queryset):
+    for portfolio in queryset:
+        # Reset portfolio totals
+        portfolio.total_investment = 0
+        portfolio.total_amount = 0
+        portfolio.save(update_fields=["total_investment", "total_amount"])
+
+        # Delete holdings related to this portfolio only
+        StockHolding.objects.filter(portfolio=portfolio).delete()
+        #Ticker.objects.filter(portfolio=portfolio).delete()
+        #TickerData.objects.filter(portfolio=portfolio).delete()
+    # Ticker.objects.all().delete()
+    # TickerData.objects.all().delete()
+    
+    messages.success(
+        request,
+        f"{queryset.count()} portfolio(s) have been reset successfully."
+    )
+reset_portfolio.short_description = "Reset selected portfolio(s)"
+
 # Register your models here.
 @admin.register(Portfolio)
 class PortfolioAdmin(admin.ModelAdmin):
     list_display = ('user','name','platform','total_investment','total_amount')
     list_filter = ('platform',)
     search_fields = ("name",)
+    actions = [reset_portfolio]
 
 
 @admin.register(StockHolding)
@@ -41,7 +62,10 @@ class AppSecretAdmin(admin.ModelAdmin):
     list_filter = ('type','portfolio')
     search_fields = ("type",)
 
-admin.site.register(Ticker)
+@admin.register(Ticker)
+class TickerAdmin(admin.ModelAdmin):
+    list_display = ('ticker',"first_txn",'last_txn','exchange')
+
 
 @admin.register(TickerData)
 class TickerDataAdmin(admin.ModelAdmin):

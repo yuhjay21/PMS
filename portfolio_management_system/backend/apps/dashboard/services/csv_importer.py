@@ -33,7 +33,7 @@ def process_csv_rows(file_obj, pf_id):
             portfolio = portfolios.first()
    
             # Create holding or load existing
-
+            print(f"{symbol} | {txn_type} | {date_txn} | {portfolio.total_amount}")
             if txn_type == "Cash Deposit":
                 if portfolio.currency.upper() != symbol.upper() or portfolio.platform.upper() != exchange.upper():
                     errors.append(f" Portfolio with Symbol ({symbol}) & Plateform ({exchange}) doesnt exist")
@@ -46,6 +46,8 @@ def process_csv_rows(file_obj, pf_id):
                     total_amount = qty,
                     date_transaction = date_txn
                 )
+                #print(f"{symbol} | {txn_type} | {date_txn} | {qty} | {portfolio.total_amount}")
+                portfolio.save()
             else:
                 holding, created = StockHolding.objects.get_or_create(
                     portfolio=portfolio,
@@ -57,14 +59,16 @@ def process_csv_rows(file_obj, pf_id):
                     }
                 )
                 Holding_Data = update_holdings(
+                    holding,
                     {'p_id'      :pf_id,
                     'symbol'    :symbol,
                     'quantity'  :qty,
                     'commission':commission,
-                    'exchange'  : exchange,
+                    'exchange'  :exchange,
                     'trade_type':txn_type,
                     'price'     :buy_price}
                 )
+                
                 Holding_Data.save()
                 # Create transaction
                 transaction.objects.create(
@@ -78,11 +82,10 @@ def process_csv_rows(file_obj, pf_id):
                     Commission=commission,
                 )
 
-            responses.append(f"{symbol} OK")
+            responses.append(f"{symbol}-{date_txn} OK")
 
         except Exception as e:
             #print(row.get("Holding"), str(e))
             errors.append(str(e))
             break
-    print(responses, errors)
     return responses, errors

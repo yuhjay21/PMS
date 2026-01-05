@@ -19,7 +19,7 @@ MARKET_TZ = ZoneInfo(settings.TIME_ZONE)
 MARKET_OPEN = time(hour=10, minute=0)
 MARKET_CLOSE = time(hour=16, minute=10)
 
-REFRESH_LOCK_SECS = 5
+REFRESH_LOCK_SECS = 60*10
 DEFAULT_MAX_AGE_MINUTES = 15
 
 
@@ -98,6 +98,7 @@ def acquire_refresh_lock(*, trigger_reason: str, timeout_seconds: int) -> bool:
         state = _get_refresh_state(for_update=True)
 
         if state.refresh_lock_expires_at and state.refresh_lock_expires_at > now:
+            print(f"Expires at - {expires_at}")
             return False
 
         state.refresh_lock_reason = trigger_reason
@@ -120,12 +121,12 @@ def release_refresh_lock() -> None:
 
         state.refresh_lock_reason = None
         state.refresh_lock_acquired_at = None
-        state.refresh_lock_expires_at = None
+        #state.refresh_lock_expires_at = None
         state.save(
             update_fields=[
                 "refresh_lock_reason",
                 "refresh_lock_acquired_at",
-                "refresh_lock_expires_at",
+                #"refresh_lock_expires_at",
             ]
         )
 
@@ -148,20 +149,25 @@ def should_refresh_market_data(
 
     if allow_closed_catch_up:
         most_recent_trading_day = last_trading_day(now)
+        print(f"most_recent_trading_day {most_recent_trading_day}")
+
         if last_refresh is None or last_refresh.date() < most_recent_trading_day:
+            print("Last Refresh is None")
             return True
+
         if (
             last_refresh.date() == most_recent_trading_day
-            and now >= market_close_dt(now)
+            and now >= market_open_dt(now)
             and last_refresh < market_close_dt(now)
         ):
+            print("Market Open yet")
             return True
-
+    print("Nothing Yet")
     if not is_market_open(now):
-        return False
+        return True
     if last_refresh is None:
         return True
-
+    print((now - last_refresh))
     return (now - last_refresh) >= timedelta(minutes=max_age_minutes)
 
 
@@ -180,22 +186,23 @@ def schedule_market_refresh_if_needed(
     now = market_now()
     last_refresh = get_last_refresh()
 
-    if not should_refresh_market_data(
-        last_refresh,
-        now=now,
-        max_age_minutes=max_age_minutes,
-        allow_closed_catch_up=allow_closed_catch_up,
-    ):  
-        return None
-    if not acquire_refresh_lock(
-        trigger_reason=trigger_reason, timeout_seconds=REFRESH_LOCK_SECS
-    ):
-        return None
+    # if not should_refresh_market_data(
+    #     last_refresh,
+    #     now=now,
+    #     max_age_minutes=max_age_minutes,
+    #     allow_closed_catch_up=allow_closed_catch_up,
+    # ):  
+    #     print("Market Refresh False")
+    #     return None
+    # if acquire_refresh_lock(
+    #     trigger_reason=trigger_reason, timeout_seconds=REFRESH_LOCK_SECS
+    # ):
+    #     return None
     # Avoid import cycles by importing the task lazily
     from apps.dashboard.tasks.market_tasks import capture_asx_market_snapshot
     
-    result = capture_asx_market_snapshot.delay(
+    result = capture_asx_market_snapshot.apply_async(
         trigger_reason= trigger_reason
     )
-    print("Queued capture_asx_market_snapshot task_id=", result.id)
+
     return result

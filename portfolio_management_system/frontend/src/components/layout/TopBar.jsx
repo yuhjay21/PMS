@@ -36,7 +36,6 @@ export default function TopBar() {
 
         const portfolioResponse = await getUserPortfolios();
         const userPortfolios = portfolioResponse.portfolios || [];
-        console.log(userPortfolios);
         setPortfolios(userPortfolios);
 
         // Ensure the selected portfolio exists; fall back to first portfolio or "all"

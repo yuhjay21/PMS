@@ -16,7 +16,7 @@ import yfinance as yf
 from django.core.cache import cache
 from django.db.models import Max, Min, Sum
 from django.utils import timezone
-
+from apps.dashboard.constants import Index_Symbol
 from apps.dashboard.models import StockHolding, Ticker, TickerData, transaction as StockTransaction
 
 
@@ -119,12 +119,19 @@ def ensure_ticker(symbol: str) -> Optional[Ticker]:
     ticker_obj.exchange = ticker_obj.exchange or exchange
 
     # Derive transaction boundaries for this symbol
-    txn_bounds = StockTransaction.objects.filter(symbol__in=[symbol, normalized_symbol]).aggregate(
+    if symbol==Index_Symbol:
+        txn_bounds = StockTransaction.objects.aggregate(
         first=Min("date_transaction"),
         last=Max("date_transaction"),
-    )
+        )
+        open_qty = 1000
+    else:
+        txn_bounds = StockTransaction.objects.filter(symbol__in=[symbol, normalized_symbol]).aggregate(
+            first=Min("date_transaction"),
+            last=Max("date_transaction"),
+        )
 
-    open_qty = StockHolding.objects.filter(company_symbol__in=[symbol, normalized_symbol]).aggregate(
+        open_qty = StockHolding.objects.filter(company_symbol__in=[symbol, normalized_symbol]).aggregate(
                                 total_qty=Sum("number_of_shares")   # change "quantity" to your actual shares field name if different
                             )["total_qty"] or 0
 
@@ -143,86 +150,59 @@ def _is_market_open_day(d: date) -> bool:
     return d.weekday() < 5
 
 def _window_for_refresh(ticker_obj: "Ticker", today: date) -> Tuple[Optional[date], Optional[date]]:
-    # Refresh txn bounds from DB (in case caller has stale instance)
+    # Refresh txn bounds from DB (avoid stale instance)
     tkr = type(ticker_obj).objects.get(symbol=ticker_obj.symbol)
 
-    first_txn = tkr.first_txn
-    last_txn = tkr.last_txn
+    expected_start = tkr.first_txn
+    expected_end = tkr.last_txn
 
-    # Expected historical range:
-    expected_start = first_txn or (today - timedelta(days=365))
-    expected_end = last_txn or today
-
-    # If expected_end is before expected_start (bad data), do nothing
-    if expected_end and expected_start and expected_end < expected_start:
+    # If bounds unknown or invalid, do nothing (or set defaults if you prefer)
+    if not expected_start or not expected_end:
+        print(1)
+        return None, None
+    if expected_end < expected_start:
+        print(2)
         return None, None
 
-    qs = ticker_obj.historical_data.all()
+    qs = tkr.historical_data.all()
 
-    first_row = qs.order_by("date").first()
-    last_row = qs.order_by("-date").first()
+    last_date = qs.aggregate(last=Max("date"))["last"]
 
     # 1) No historical rows -> fetch full expected historical range
-    if not last_row:
-        return expected_start, expected_end
+    if not last_date:
+        print(3)
+        return expected_start, min(expected_end, today)
 
-    # ---- Helper: find first missing contiguous block inside [expected_start, expected_end] ----
-    def first_missing_block(start_d: date, end_d: date) -> Tuple[Optional[date], Optional[date]]:
-        if end_d < start_d:
-            return None, None
+    # 2) Only fetch forward from the day after last stored date
+    start = last_date + timedelta(days=1)
 
-        stored = set(
-            qs.filter(date__gte=start_d, date__lte=end_d).values_list("date", flat=True)
-        )
+    # Never fetch before expected_start (safety)
+    if start < expected_start:
+        start = expected_start
 
-        # Scan calendar days but only consider market-open days as "required"
-        d = start_d
-        while d <= end_d:
-            if _is_market_open_day(d) and d not in stored:
-                block_start = d
-                block_end = d
-                d2 = d + timedelta(days=1)
-                while d2 <= end_d:
-                    if _is_market_open_day(d2) and d2 not in stored:
-                        block_end = d2
-                        d2 += timedelta(days=1)
-                        continue
-                    break
-                return block_start, block_end
-            d += timedelta(days=1)
-
+    # Never fetch after today or after expected_end
+    end = min(expected_end, today)
+    if start > end:
+        # 3) Optional: same-day refresh window (intraday updates)
+        if expected_end == today and _is_market_open_day(today):
+            print(4)
+            return today, today
+        print(5)
         return None, None
 
-    # 2) If data exists but starts after first_txn (or expected_start), backfill head
-    if first_row and expected_start < first_row.date:
-        head_end = min(expected_end, first_row.date - timedelta(days=1))
-        if expected_start <= head_end:
-            # Avoid already-stored past days: only fetch missing days in this head window
-            s, e = first_missing_block(expected_start, head_end)
-            if s and e:
-                return s, e
+    # If you only want to fetch when there's at least one market-open day in [start, end],
+    # advance start forward to the next market-open day and trim end back similarly.
+    while start <= end and not _is_market_open_day(start):
+        start += timedelta(days=1)
 
-    # 3) If data is missed between expected_start and expected_end, fill gaps (avoid stored past days)
-    gap_start = max(expected_start, first_row.date if first_row else expected_start)
-    gap_end = min(expected_end, last_row.date if last_row else expected_end)
-    s, e = first_missing_block(gap_start, gap_end)
-    if s and e:
-        return s, e
+    while end >= start and not _is_market_open_day(end):
+        end -= timedelta(days=1)
 
-    # 4) If today is market open day and latest stored date is before today, fetch forward to today
-    latest_date = last_row.date
-    if _is_market_open_day(today) and latest_date < today:
-        # Avoid already-stored past days by starting at next day after latest_date
-        forward_start = max(latest_date + timedelta(days=1), expected_start)
-        forward_end = today
-        if forward_start <= forward_end:
-            return forward_start, forward_end
-
-    # 5) If latest stored row is today, allow same-day refresh window (intraday updates)
-    if latest_date == today:
-        return today, today
-
-    return None, None
+    if start > end:
+        print(6)
+        return None, None
+    print(7)
+    return start, end
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +239,17 @@ def _store_history(ticker_obj: Ticker, df: pd.DataFrame) -> int:
 
     return rows_written
 
+def yahooFinance_Download(ticker_symbol, start, end, progress, auto_adjust):
+    df = yf.download(
+            ticker_symbol,
+            start=start - timedelta(days=1),
+            end=end + timedelta(days=1),  # inclusive end date
+            progress=progress,
+            auto_adjust=auto_adjust,
+        )
+    # print(df)
+    sector = df
+    return df, sector
 
 def refresh_ticker_history(symbols: Iterable[str]) -> List[SyncResult]:
     """
@@ -274,12 +265,12 @@ def refresh_ticker_history(symbols: Iterable[str]) -> List[SyncResult]:
         seen.add(symbol)
 
         ticker_obj = ensure_ticker(symbol)
+
         if ticker_obj is None:
             results.append(
                 SyncResult(symbol=symbol, updated=False, start=None, end=None, error="invalid symbol")
             )
             continue
-
         start, end = _window_for_refresh(ticker_obj, today)
         print(f"Accessing Values for {symbol} from {start} to {end}")
         if start is None or end is None or start > end:
@@ -287,15 +278,25 @@ def refresh_ticker_history(symbols: Iterable[str]) -> List[SyncResult]:
                 SyncResult(symbol=ticker_obj.symbol, updated=False, start=start, end=end)
             )
             continue
-
-        df = yf.download(
-            ticker_obj.symbol,
-            start=start,
+        if symbol == Index_Symbol:
+            df, sector = yahooFinance_Download(
+            ticker_obj.ticker,
+            start=start - timedelta(days=1),
             end=end + timedelta(days=1),  # inclusive end date
             progress=False,
             auto_adjust=True,
         )
-
+        else:
+            df, sector = yahooFinance_Download(
+                ticker_obj.symbol,
+                start=start - timedelta(days=1),
+                end=end + timedelta(days=1),  # inclusive end date
+                progress=False,
+                auto_adjust=True,
+            )
+        # hldng_obj = StockHolding.objects.get(company_symbol=ticker_obj.ticker, Exchange=ticker_obj.exchange)
+        # hldng_obj.sector = 
+ 
         if df is None or df.empty:
             results.append(
                 SyncResult(symbol=ticker_obj.symbol, updated=False, start=start, end=end, error="no data returned")
