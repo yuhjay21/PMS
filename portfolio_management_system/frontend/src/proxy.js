@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 
 export function proxy(req) {
   const isDashboardPath = req.nextUrl.pathname.startsWith('/dashboard');
+  const isTaxPath = req.nextUrl.pathname.startsWith('/tax');
 
-  if (!isDashboardPath) {
+  if (!isDashboardPath && !isTaxPath) {
     return NextResponse.next();
   }
 
@@ -24,5 +25,6 @@ export function proxy(req) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/tax/:path*'],
+  
 };

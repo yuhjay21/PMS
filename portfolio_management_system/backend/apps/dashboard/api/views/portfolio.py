@@ -91,6 +91,7 @@ class DashboardHoldingsAPI(APIView):
             trigger_reason="dashboard-load",
             allow_closed_catch_up=True,
         )
+        
         # --- Get selected portfolio ID from GET params ---
         selected_portfolio_id = request.GET.get("portfolio")
 
@@ -222,6 +223,7 @@ class DashboardHoldingsAPI(APIView):
 
                 # Unadjusted PnL excludes commissions from investment_amount
                 unadjusted_PnL += ((market_price * number_shares) - investment_amount)
+
                 y_unadjusted_PnL += ((prev_market_price * number_shares) - investment_amount)
 
                 PnL = c['total_unrealized_pnl']
@@ -294,6 +296,7 @@ class DashboardHoldingsAPI(APIView):
         txns_dict = annotate_realized_pnl(list(txns_data))
 
         # --- Final metrics (mirror original context keys) ---
+
         context = {
             'holdings': holdings,
             'transactions': txns_dict,

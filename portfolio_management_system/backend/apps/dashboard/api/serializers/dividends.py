@@ -2,14 +2,10 @@ from rest_framework import serializers
 
 class DividendEventSerializer(serializers.Serializer):
     symbol = serializers.CharField()
-    company_name = serializers.CharField()
-    sector = serializers.CharField()
-    ex_date = serializers.CharField()
-    pay_date = serializers.CharField()
-    dividend = serializers.FloatField()
-    quantity = serializers.IntegerField()
-    total_amount = serializers.FloatField()
-
+    ex_date = serializers.DateField()
+    div_per_share = serializers.FloatField()
+    shares = serializers.FloatField()
+    total_dividend = serializers.FloatField()
 
 class DividendConfirmSerializer(serializers.Serializer):
     events = serializers.ListField(

@@ -178,7 +178,7 @@ class PortfolioPerformanceAPI(APIView):
             # portfolio_value.at[current_date, "OnHandCash"] = cash_on_hand
             # portfolio_value.at[current_date, "cash_sum"] = cash_sum
             # portfolio_value.at[current_date, "cumulative_sell_proceeds"] = cumulative_sell_proceeds
-            portfolio_value.at[current_date, "div_sum"] = div_sum
+            #portfolio_value.at[current_date, "div_sum"] = div_sum
             # portfolio_value.at[current_date, "cumulative_buy_cost"] = cumulative_buy_cost
             
             
@@ -188,7 +188,7 @@ class PortfolioPerformanceAPI(APIView):
             portfolio_value.at[current_date, "CashDeposits"] = cash_sum
 
         portfolio_value["CashValue"] = portfolio_value["CashValue"].round(2)
-
+        #portfolio_value["div_%"] = portfolio_value["div_sum"]/portfolio_value["CashDeposits"] * 100
         # --- Portfolio % performance ---
         portfolio_value["Portfolio"] = (
             portfolio_value["CashValue"] / portfolio_value["CashDeposits"] * 100 - 100
@@ -225,12 +225,12 @@ class PortfolioPerformanceAPI(APIView):
 
         portfolio_value = portfolio_value.reset_index()
         portfolio_value["Date"] = portfolio_value["Date"].astype(str)
-        print(portfolio_value)
+        #print(portfolio_value)
         return Response(
             {
                 "dates": portfolio_value["Date"].tolist(),
                 "portfolio": portfolio_value["Portfolio"].tolist(),
-                "div_sum": portfolio_value["Date"].tolist(),
+                #"divper": portfolio_value["div_%"].tolist(),
                 "pnl_index": portfolio_value["Date"].tolist(),
                 "portfolio_value": portfolio_value["CashValue"].tolist(),
                 "pnl": portfolio_value["pnl"].tolist(),

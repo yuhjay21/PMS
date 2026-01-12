@@ -6,6 +6,7 @@ import { useState } from 'react';
 import TopBar from './TopBar';
 import { Toaster } from 'react-hot-toast';
 
+
 export default function AppShell({ children }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(true);
@@ -24,8 +25,9 @@ export default function AppShell({ children }) {
   }
 
   const navItems = [
-    { href: '/', label: 'Home', description: 'Welcome hub' },
+    //{ href: '/', label: 'Home', description: 'Welcome hub' },
     { href: '/dashboard', label: 'Dashboard', description: 'Insights & KPIs' },
+    { href: '/tax', label: "Tax", descriptors: 'Tax Overview'},
     // more: { href: '/dividends', label: 'Dividends' }, etc.
   ];
 

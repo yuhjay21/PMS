@@ -51,7 +51,6 @@ def capture_asx_market_snapshot(self, trigger_reason: str = "manual"):
         if Index_Symbol+".AX" not in symbols:
             symbols.append(Index_Symbol)
         
-        print(symbols)
         results = refresh_ticker_history(symbols)
         updated = [res.symbol for res in results if res.updated]
         skipped = [res.symbol for res in results if not res.updated and res.error is None]

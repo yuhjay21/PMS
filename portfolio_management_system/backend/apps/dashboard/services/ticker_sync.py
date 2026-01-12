@@ -158,10 +158,10 @@ def _window_for_refresh(ticker_obj: "Ticker", today: date) -> Tuple[Optional[dat
 
     # If bounds unknown or invalid, do nothing (or set defaults if you prefer)
     if not expected_start or not expected_end:
-        print(1)
+        
         return None, None
     if expected_end < expected_start:
-        print(2)
+        
         return None, None
 
     qs = tkr.historical_data.all()
@@ -170,7 +170,7 @@ def _window_for_refresh(ticker_obj: "Ticker", today: date) -> Tuple[Optional[dat
 
     # 1) No historical rows -> fetch full expected historical range
     if not last_date:
-        print(3)
+        
         return expected_start, min(expected_end, today)
 
     # 2) Only fetch forward from the day after last stored date
@@ -185,9 +185,9 @@ def _window_for_refresh(ticker_obj: "Ticker", today: date) -> Tuple[Optional[dat
     if start > end:
         # 3) Optional: same-day refresh window (intraday updates)
         if expected_end == today and _is_market_open_day(today):
-            print(4)
+            
             return today, today
-        print(5)
+        
         return None, None
 
     # If you only want to fetch when there's at least one market-open day in [start, end],
@@ -199,9 +199,9 @@ def _window_for_refresh(ticker_obj: "Ticker", today: date) -> Tuple[Optional[dat
         end -= timedelta(days=1)
 
     if start > end:
-        print(6)
+        
         return None, None
-    print(7)
+    
     return start, end
 
 

@@ -98,7 +98,7 @@ def acquire_refresh_lock(*, trigger_reason: str, timeout_seconds: int) -> bool:
         state = _get_refresh_state(for_update=True)
 
         if state.refresh_lock_expires_at and state.refresh_lock_expires_at > now:
-            print(f"Expires at - {expires_at}")
+            #print(f"Expires at - {expires_at}")
             return False
 
         state.refresh_lock_reason = trigger_reason
@@ -149,10 +149,10 @@ def should_refresh_market_data(
 
     if allow_closed_catch_up:
         most_recent_trading_day = last_trading_day(now)
-        print(f"most_recent_trading_day {most_recent_trading_day}")
+        #print(f"most_recent_trading_day {most_recent_trading_day}")
 
         if last_refresh is None or last_refresh.date() < most_recent_trading_day:
-            print("Last Refresh is None")
+            #print("Last Refresh is None")
             return True
 
         if (
@@ -160,14 +160,14 @@ def should_refresh_market_data(
             and now >= market_open_dt(now)
             and last_refresh < market_close_dt(now)
         ):
-            print("Market Open yet")
+            #print("Market Open yet")
             return True
-    print("Nothing Yet")
+    #print("Nothing Yet")
     if not is_market_open(now):
         return True
     if last_refresh is None:
         return True
-    print((now - last_refresh))
+    #print((now - last_refresh))
     return (now - last_refresh) >= timedelta(minutes=max_age_minutes)
 
 

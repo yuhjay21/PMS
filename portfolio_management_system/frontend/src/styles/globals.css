@@ -299,6 +299,8 @@ a {
   background: linear-gradient(90deg, #4f46e5 0%,  #7c3aed 100%);
   border-bottom: 1px solid #e2e8f0;
   backdrop-filter: blur(6px);
+  position: relative;
+  z-index: 1050;
 }
 
 .topbar-title {

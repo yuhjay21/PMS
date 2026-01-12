@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams  } from 'next/navigation';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -16,6 +16,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get('next');
+  const safeNext =nextParam && nextParam.startsWith('/') ? nextParam : '/dashboard';
 
   function getCookie(name) {
     if (typeof document === 'undefined') return null;
@@ -61,7 +64,8 @@ export default function LoginPage() {
         return;
       }
       
-      router.push('/dashboard');
+      router.push(safeNext);
+
     } catch (err) {
       console.error(err);
       setError('Something went wrong while logging in.');

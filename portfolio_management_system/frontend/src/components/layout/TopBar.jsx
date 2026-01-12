@@ -147,6 +147,7 @@ export default function TopBar() {
                 className="dropdown-menu dropdown-menu-end show"
                 style={{ minWidth: '220px' }}
               >
+                <div class="dropdown-content">
                 {profileMenuItems.map((item) => (
                   <Link
                     key={item.href}
@@ -157,6 +158,7 @@ export default function TopBar() {
                     {item.label}
                   </Link>
                 ))}
+                </div>
               </div>
             )}
           </div>

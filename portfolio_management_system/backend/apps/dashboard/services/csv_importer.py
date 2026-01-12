@@ -1,8 +1,7 @@
 import csv
 from datetime import datetime
 from apps.dashboard.models import Portfolio, StockHolding, transaction, deposit
-from apps.dashboard.services.holdings import update_holdings, buy_holding, sell_holding
-
+from apps.dashboard.services.holdings import update_holdings
 
 def process_csv_rows(file_obj, pf_id):
     """

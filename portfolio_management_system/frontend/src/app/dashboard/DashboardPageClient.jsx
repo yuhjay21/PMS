@@ -1,6 +1,7 @@
 'use client';
 
 import '@/styles/globals.css';
+import DividendConfirmTable from './DashboardDividendPage';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from "@/lib/auth";
@@ -220,7 +221,7 @@ function StockDetailsModal({ c, transactions }) {
                           className="text-body text-center"
                           style={{ fontSize: 15 }}
                         >
-                          ${formatMoney(Number(t.Buy_Price || 0))}
+                          ${formatMoney(Number(t.Buy_Price || 0),t.transaction_type=="Dividend Deposit" ? 3:2)}
                         </td>
                         <td
                           className="text-body text-center"
@@ -287,6 +288,9 @@ export default function DashboardPageClient() {
   const [filterOpenOnly, setFilterOpenOnly] = useState(false);
   const [performanceData, setPerformanceData] = useState(null);
   const [performanceLoading, setPerformanceLoading] = useState(false);
+  const [dividendEvents, setDividendEvents] = useState([]);
+  const [dividendLoading, setDividendLoading] = useState(false);
+  const [dividendError, setDividendError] = useState('');
 
   const tableRef = useRef(null);
   const footerRef = useRef(null);
@@ -348,6 +352,41 @@ export default function DashboardPageClient() {
       alert('Upload failed, please try again.');
     } finally {
       setCsvUploading(false);
+    }
+  }
+
+  async function handleDividendFetch() {
+    try {
+      setDividendLoading(true);
+      setDividendError('');
+      const portfolioId =
+        selectedPortfolio && selectedPortfolio !== ALL_PORTFOLIOS
+          ? selectedPortfolio
+          : ALL_PORTFOLIOS;
+      const res = await fetch(
+        `${API_BASE}/api/v1/dashboard/dividends/check/?portfolio=${encodeURIComponent(
+          portfolioId
+        )}`,
+        {
+          credentials: 'include',
+          headers: {
+          'X-CSRFToken': getCookie('csrftoken') || '',
+        }
+        }
+      );
+      
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch dividends');
+      }
+      const data = await res.json();
+      setDividendEvents(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+      setDividendError('Unable to fetch dividends. Please try again.');
+      setDividendEvents([]);
+    } finally {
+      setDividendLoading(false);
     }
   }
 
@@ -413,7 +452,6 @@ export default function DashboardPageClient() {
           selectedPortfolio || ALL_PORTFOLIOS
         );
 
-        console.log(response);
 
         if (!isCancelled) setPerformanceData(response);
       } catch (e) {
@@ -677,8 +715,7 @@ export default function DashboardPageClient() {
                     className="mb-1 mt-1"
                     style={{ color: colorBySign(summary.realizedPnl) }}
                   >
-                    $
-                    {formatMoney(summary.realizedPnl )}
+                    ${formatMoney(summary.realizedPnl)} 
                   </h5>
                   <div
                     className="text-muted"
@@ -690,10 +727,7 @@ export default function DashboardPageClient() {
                   >
                     <small>
                       Dividends: $
-                      {formatMoney(summary.Total_dividends )}
-                    </small>
-                    <small>
-                      ( Yield: {formatMoney(summary.Dividend_per )}% )
+                      {formatMoney(summary.Total_dividends )} ( Yield: {formatMoney(summary.Dividend_per )}% )
                     </small>
                   </div>
                 </div>
@@ -929,11 +963,21 @@ export default function DashboardPageClient() {
                             Import CSV
                           </a>
                         </span>
-                        <h6 className="dropdown-header">From Emails</h6>
-                        <button className="dropdown-item" type="button">
+                        {/* <h6 className="dropdown-header">From Emails</h6> */}
+                        <button className={`dropdown-item ${
+                              selectedPortfolio == 'all' ? 'disabled' : ''
+                            }`} type="button">
                           Fetch Transaction
                         </button>
-                        <button className="dropdown-item" type="button">
+                        <button
+                          className={`dropdown-item ${
+                              selectedPortfolio == 'all' ? 'disabled' : ''
+                            }`}
+                          type="button"
+                          data-bs-toggle="modal"
+                          data-bs-target="#fetchDividendModal"
+                          onClick={handleDividendFetch}
+                        >
                           Fetch Dividend
                         </button>
                       </div>
@@ -1082,8 +1126,109 @@ export default function DashboardPageClient() {
           <StockDetailsModal key={`modal-${c.id || c.CompanySymbol}`} c={c} transactions={transactions} />
         ))}
 
+          {/* === Fetch Dividends Modal === */}
+          <div
+            id="fetchDividendModal"
+            className="modal fade"
+            tabIndex={-1}
+            aria-hidden="true"
+          >
+            <div className="modal-dialog modal-dialog-centered modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h4 className="modal-title">Dividends from Yfinance</h4>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    aria-label="Close"
+                    data-bs-dismiss="modal"
+                  />
+                </div>
+                <div className="modal-body">
+                  {dividendLoading && (
+                    <div className="text-center text-muted">Fetching & Processing Dividends…</div>
+                  )}
+                  {dividendError && (
+                    <div className="alert alert-danger" role="alert">
+                      {dividendError}
+                    </div>
+                  )}
+                  {!dividendLoading && !dividendError && dividendEvents.length === 0 && (
+                    <div className="text-center text-muted">
+                      No new dividends found.
+                    </div>
+                  )}
+                  {!dividendLoading && dividendEvents.length > 0 && (
+                    <DividendConfirmTable dividendEvents={dividendEvents} formatMoney={formatMoney} selectedPortfolio={selectedPortfolio} />
+                    // <div className="table-responsive">
+                    //   <table className="table table-striped table-centered mb-0">
+                    //     <thead>
+                    //       <tr>
+                    //         <th style={{ width: 80 }}>
+                    //         <input
+                    //           type="checkbox"
+                    //           className="form-check-input"
+                    //           checked={allSelected}
+                    //           onChange={toggleAll}
+                    //           aria-label="Select all dividends"
+                    //         />
+                    //       </th>
+                    //         <th>Symbol</th>
+                    //         <th>Ex-Date</th>
+                    //         <th className="text-end">Dividend/Share</th>
+                    //         <th className="text-end">Shares</th>
+                    //         <th className="text-end">Total</th>
+                    //       </tr>
+                    //     </thead>
+                    //     <tbody>
+                    //       {dividendEvents.map((event) => (
+                    //         <tr
+                    //           key={`${event.symbol}-${event.ex_date}-${event.total_dividend}`}
+                    //         >
+                    //           <td><input type="checkbox" name="selected_dividends" value="{{ d.symbol }}|{{ d.ex_date }}" class="form-check-input"></input></td>
+                    //           <td>{event.symbol}</td>
+                    //           <td>{event.ex_date}</td>
+                    //           <td className="text-end">
+                    //             ${formatMoney(event.div_per_share)}
+                    //           </td>
+                    //           <td className="text-end">{event.shares}</td>
+                    //           <td className="text-end">
+                    //             ${formatMoney(event.total_dividend)}
+                    //           </td>
+                    //         </tr>
+                    //       ))}
+                    //     </tbody>
+                    //   </table>
+                    //   <div class="d-flex justify-content-between align-items-center mt-3">
+                    //         <div>
+                    //             <label for="transaction_type" class="form-label me-2 fw-semibold">Transaction Type:</label>
+                    //             <select name="transaction_type" id="transaction_type" class="form-select d-inline-block w-auto">
+                    //                 <option value="Dividend Deposit">Dividend Deposit</option>
+                    //                 <option value="Dividend Reinvestment">Dividend Reinvestment</option>
+                    //             </select>
+                    //         </div>
 
-          {/* === Deposit Modal === */}
+                    //         <button type="submit" class="btn btn-success">
+                    //             Confirm Selected Dividends
+                    //         </button>
+                    //   </div>
+                    // </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* === Add Stock CSV Modal === */}
           <div id="myModal_csv" className="modal fade" tabIndex={-1} aria-hidden="true" >
             <div className="modal-dialog modal-dialog-centered modal-lg">
               <div className="modal-content">
@@ -1179,7 +1324,7 @@ export default function DashboardPageClient() {
             </div>
           </div>
 
-          {/* === Deposit Modal === */}
+          {/* === Add Deposit Modal === */}
           <div
             id="myDepositModal"
             className="modal fade"
@@ -1514,13 +1659,13 @@ function colorBySign(value) {
   return '#495057';
 }
 
-function formatMoney(value) {
+function formatMoney(value,maxFraction=2) {
   if (value === 0) return 0;
   if (typeof value !== "number" || Number.isNaN(value)) {
     return "Not working";
   }
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: maxFraction,
   });
 }
