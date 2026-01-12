@@ -616,7 +616,7 @@ export default function DashboardPageClient() {
 
         {/* === Notification Div === */}
 
-        <div className="row">
+        <div className="row ">
           <div className="col-12">
              
           </div>
@@ -625,7 +625,7 @@ export default function DashboardPageClient() {
 
 
         {/* === Page title row === */}
-        <div className="row">
+        <div className="row mb-3">
           <div className="col-12">
             <div className="page-title-box d-flex align-items-center justify-content-between">
               <h4 className="mb-0">Dashboard</h4> 

@@ -8,6 +8,7 @@ from apps.dashboard.api.views.prices import UpdatePricesAPI,PriceHistoryAPI, Upd
 from apps.dashboard.api.views.financials import FinancialsAPI
 from apps.dashboard.api.views.insights import PortfolioInsightsAPI
 from apps.dashboard.api.views.backtesting import BacktestingAPI
+from apps.dashboard.api.views.tax import TaxOverviewAPI
 
 urlpatterns = [
     path("portfolios/", UserPortfoliosAPI.as_view(), name="user_portfolios"),
@@ -32,6 +33,8 @@ urlpatterns = [
     path("prices/history/", PriceHistoryAPI.as_view(), name="prices_history"),
     path("prices/update-portfolio/", UpdatePortfolioTickersAPI.as_view(), name="update_portfolio_tickers"),
 
+    #Tax
+    path("tax/", TaxOverviewAPI.as_view(), name="tax_overview"),
 
     #Insights + Financials
     path("financials/", FinancialsAPI.as_view(), name="financials"),

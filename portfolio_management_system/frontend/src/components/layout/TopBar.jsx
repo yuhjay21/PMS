@@ -103,7 +103,7 @@ export default function TopBar() {
 
   return (
     <header className="topbar">
-      <div className="topbar-title">Portfolio Dashboard</div>
+      <div className="topbar-title">Portfolio Management System </div>
       <div className="topbar-right d-flex align-items-center gap-3 fw-bold text-white">
         <div className="d-flex align-items-center gap-2">
           <label htmlFor="topbar-portfolio-select" className="mb-0">

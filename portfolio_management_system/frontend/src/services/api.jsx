@@ -77,3 +77,8 @@ export function createUserPortfolio(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function getTaxOverview({ portfolio = 'all', fy = 'max' } = {}) {
+  const params = new URLSearchParams({ portfolio, fy });
+  return apiFetch(`/api/v1/dashboard/tax/?${params.toString()}`);
+}
