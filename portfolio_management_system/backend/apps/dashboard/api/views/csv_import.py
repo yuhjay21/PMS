@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 
 import csv, io
@@ -103,6 +103,58 @@ class CSVUploadAPI(APIView):
                 {"success": False, "message": "Process failed", "error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class TransactionFormAPI(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser, FormParser)
+
+    def post(self, request):
+        data = request.data
+        portfolio_id = data.get("p_id")
+        symbol = data.get("symbol")
+        exchange = data.get("exchange")
+        transaction_type = data.get("transaction_type")
+        price = data.get("price", 0)
+        quantity = data.get("quantity", 0)
+        brokerage = data.get("brokerage", 0)
+        date_str = data.get("date_transaction")
+
+        if not portfolio_id:
+            return Response({"success": False, "message": "Portfolio ID is required"}, status=400)
+
+        portfolio = get_object_or_404(Portfolio, id=portfolio_id, user=request.user)
+
+        try:
+            parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            return Response(
+                {"success": False, "message": "Invalid transaction date"},
+                status=400,
+            )
+
+        row = {
+            "Holding": symbol,
+            "Exchange": exchange,
+            "Price": price,
+            "Quantity": quantity,
+            "Type": transaction_type,
+            "Brokerage": brokerage,
+            "Date": parsed_date.strftime("%d/%m/%Y"),
+        }
+        df = pd.DataFrame([row])
+        responses, errors = process_csv_rows(file_obj=df, pf_id=portfolio.id)
+
+        if errors:
+            return Response(
+                {"success": False, "message": "Transaction import failed", "errors": errors},
+                status=400,
+            )
+
+        return Response(
+            {"success": True, "message": "Transaction added", "result": responses},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class UpdateHoldingsAPI(APIView):

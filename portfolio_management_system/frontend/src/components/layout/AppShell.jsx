@@ -27,7 +27,7 @@ export default function AppShell({ children }) {
   const navItems = [
     //{ href: '/', label: 'Home', description: 'Welcome hub' },
     { href: '/dashboard', label: 'Dashboard', description: 'Insights & KPIs' },
-    { href: '/tax', label: "Tax", descriptors: 'Tax Overview'},
+    { href: '/tax', label: "Tax", description: 'Tax Overview'},
     // more: { href: '/dividends', label: 'Dividends' }, etc.
   ];
 
@@ -58,8 +58,8 @@ export default function AppShell({ children }) {
             
             {!collapsed && (
               <div>
-                <div className="sidebar-title">Portfolio Web</div>
-                <div className="sidebar-subtitle">Control center</div>
+                <div className="sidebar-title">Portfolio</div>
+                <div className="sidebar-subtitle">Management System</div>
               </div>
             )}
           </div>

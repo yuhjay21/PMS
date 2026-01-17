@@ -100,6 +100,7 @@ export default function DividendConfirmTable({
         symbol: evt.symbol,
         ex_date: evt.ex_date,
         shares: evt.shares,
+        exchange: evt.exchange,
         div_per_share : evt.div_per_share,
         total_dividend: evt.total_dividend, // IMPORTANT: match your serializer field
         reinvest,
@@ -109,7 +110,6 @@ export default function DividendConfirmTable({
 
     try {
       setSubmitting(true);
-      console.log(JSON.stringify(payload));
       const res = await apiFetch("/api/v1/dashboard/dividends/confirm-multiple/", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -168,7 +168,7 @@ export default function DividendConfirmTable({
                       onChange={() => toggleOne(key)}
                     />
                   </td>
-                  <td>{event.symbol}</td>
+                  <td>{event.symbol} | {event.exchange}</td>
                   <td>{event.ex_date}</td>
                   <td className="text-end">${formatMoney(event.div_per_share,4)}</td>
                   <td className="text-end">{event.shares}</td>

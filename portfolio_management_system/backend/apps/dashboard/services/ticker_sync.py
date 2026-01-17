@@ -222,11 +222,11 @@ def _store_history(ticker_obj: Ticker, df: pd.DataFrame) -> int:
         trade_date = row["Date"].dt.date
         date = _normalize_date(trade_date.iloc[0])
         defaults = {
-            "open": round(row["Open"].iloc[0],2),
-            "high": round(row["High"].iloc[0],2),
-            "low": round(row["Low"].iloc[0],2),
-            "close": round(row["Close"].iloc[0],2),
-            "volume": round(row["Volume"].iloc[0],2),
+            "open": row["Open"].iloc[0],
+            "high": row["High"].iloc[0],
+            "low": row["Low"].iloc[0],
+            "close": row["Close"].iloc[0],
+            "volume": row["Volume"].iloc[0],
             "datetime": getattr(row["Date"], "to_pydatetime", lambda: None)(),
         }
 

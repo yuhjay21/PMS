@@ -61,7 +61,7 @@ class CheckDividendsAPI(APIView):
                 div_per_share = value
 
                 symbol = ticker_n.split(".")[0]
-                Exchange = ticker_n.split(".")[1]
+                Exchange = "ASX" if ticker_n.split(".")[1]=="AX" else "N/A"
 
                 already_recorded = user_transactions.filter(
                     symbol=symbol,
@@ -97,7 +97,7 @@ class CheckDividendsAPI(APIView):
                 
                 total_dividend = round(net_shares * div_per_share, 2)
                 eligible_dividends.append(
-                    {
+                    {   "pf_id" : portfolio_id,
                         "symbol": symbol,
                         "ex_date": ex_date.strftime("%Y-%m-%d"),
                         "div_per_share": div_per_share,
@@ -184,6 +184,7 @@ class ConfirmMultipleDividendsAPI(APIView):
             symbol = evt["symbol"]
             amount = evt["total_dividend"]
             ex_date = evt["ex_date"]
+            exchange = evt['exchange']
             pf_id = evt["pf_id"]
             shares = evt["shares"]
             div_per_share = evt["div_per_share"]
@@ -191,20 +192,28 @@ class ConfirmMultipleDividendsAPI(APIView):
             price = evt.get("price", None)
 
             holding = StockHolding.objects.filter(
-                portfolio__in=portfolios,
+                portfolio__id=pf_id,
                 company_symbol=symbol
             ).first()
 
             if not holding:
                 continue
-            
-            Holding_Data = update_holdings(
-                    holding,
-                    {'p_id'      :pf_id,
+            print(holding)
+            print({'p_id'      :int(pf_id),
                     'symbol'    :symbol,
                     'quantity'  :shares,
                     'commission': 0,
-                    'exchange'  : 0,
+                    'exchange'  : exchange,
+                    'trade_type':"Dividend Deposit",
+                    'price'     :div_per_share})
+
+            Holding_Data = update_holdings(
+                    holding,
+                    {'p_id'      :int(pf_id),
+                    'symbol'    :symbol,
+                    'quantity'  :shares,
+                    'commission': 0,
+                    'exchange'  : exchange,
                     'trade_type':"Dividend Deposit",
                     'price'     :div_per_share}
                 )

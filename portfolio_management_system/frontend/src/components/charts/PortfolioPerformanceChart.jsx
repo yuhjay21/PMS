@@ -136,13 +136,13 @@ export default function PortfolioPerformanceChart({ data, title = 'Performance' 
 
   return (
     <div style={styles.card}>
-      <div style={styles.headerRow}>
+      {/* <div style={styles.headerRow}>
         <div>
           <div style={styles.title}>{title}</div>
           <div style={styles.subTitle}>Portfolio vs Index</div>
         </div>
         <div style={styles.pill}>% return</div>
-      </div>
+      </div> */}
 
       <div style={styles.chartWrap}>
         <Line data={chartData} options={options} />

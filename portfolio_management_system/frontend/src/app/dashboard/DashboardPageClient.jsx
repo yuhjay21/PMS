@@ -355,6 +355,45 @@ export default function DashboardPageClient() {
     }
   }
 
+  async function handleTransactionSubmit(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const payload = {
+      p_id: formData.get('p_id'),
+      date_transaction: formData.get('date-transaction'),
+      symbol: formData.get('Symbol'),
+      transaction_type: formData.get('type'),
+      price: formData.get('price'),
+      plateform: formData.get('plateform'),
+      quantity: formData.get('quantity'),
+      exchange: formData.get('Exchange'),
+      brokerage: 0,
+    };
+
+    try {
+
+      const res = await fetch(`${API_BASE}/api/v1/dashboard/transactions/add/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken') || '',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Transaction failed');
+      }
+      alert(data.message || 'Transaction added');
+      event.target.reset();
+    } catch (err) {
+      console.error(err);
+      alert('Transaction failed, please try again.');
+    }
+  }
+
   async function handleDividendFetch() {
     try {
       setDividendLoading(true);
@@ -380,6 +419,7 @@ export default function DashboardPageClient() {
         throw new Error('Failed to fetch dividends');
       }
       const data = await res.json();
+
       setDividendEvents(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
@@ -767,7 +807,7 @@ export default function DashboardPageClient() {
           <div className="col-12">
             <div className="card shadow position-relative">
               <div className="card-body">
-                <div className="page-title-box d-flex align-items-center justify-content-between">
+                <div className="page-title-box d-flex align-items-center justify-content-between pb-2">
                   <h5 className="mb-3" id="performance_chart-Title">
                     {performanceTitle}
                   </h5>
@@ -799,6 +839,7 @@ export default function DashboardPageClient() {
                 </div>
 
                 <div style={{ position: 'relative', minHeight: 350 }}>
+                  
                   {performanceLoading ? (
                     <div
                       className="d-flex justify-content-center align-items-center"
@@ -1475,12 +1516,13 @@ export default function DashboardPageClient() {
                   />
                 </div>
                 <div className="modal-body">
-                  <form id="add-transaction-form" >
+                  <form id="add-transaction-form" onSubmit={handleTransactionSubmit}>
                     <input
                       name="p_id"
+                      id="p_id"
                       type="hidden"
                       className="form-control"
-                      value={summary.selectedPortfolioId ?? ''}
+                      value={selectedPortfolio ?? ''}
                       readOnly
                     />
                     <div className="form-group row mb-4">
@@ -1552,6 +1594,7 @@ export default function DashboardPageClient() {
                           name="price"
                           className="form-control"
                           type="number"
+                          step="0.0001"
                           defaultValue="0"
                           id="price"
                         />

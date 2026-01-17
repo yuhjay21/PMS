@@ -82,7 +82,7 @@ def update_holdings(holding, holding_data):
     quantity = float(holding_data["quantity"])
     price = float(holding_data["price"])
     commission = float(holding_data.get("commission") or 0)
-    exchange = holding_data["exchange"]
+    exchange = holding_data["exchange"] if holding_data["exchange"]!= 0 else 0
     trade_type = holding_data["trade_type"]
 
     # Fast path: existing holding object passed in

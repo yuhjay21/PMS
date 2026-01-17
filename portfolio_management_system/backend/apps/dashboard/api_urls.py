@@ -2,7 +2,7 @@ from django.urls import path
 from apps.dashboard.api.views.portfolio import DashboardHoldingsAPI, UserPortfoliosAPI
 from apps.dashboard.api.views.performance import PortfolioPerformanceAPI
 from apps.dashboard.api.views.dividends import CheckDividendsAPI,ConfirmDividendAPI,ConfirmMultipleDividendsAPI
-from apps.dashboard.api.views.csv_import import CSVUploadAPI,UpdateHoldingsAPI
+from apps.dashboard.api.views.csv_import import CSVUploadAPI, UpdateHoldingsAPI, TransactionFormAPI
 from apps.dashboard.api.views.emails import FetchStakeEmailsAPI,ConfirmStakeTransactionAPI
 from apps.dashboard.api.views.prices import UpdatePricesAPI,PriceHistoryAPI, UpdatePortfolioTickersAPI
 from apps.dashboard.api.views.financials import FinancialsAPI
@@ -23,7 +23,8 @@ urlpatterns = [
     #CSV Import
     path("csv/upload/", CSVUploadAPI.as_view(), name="csv_upload"),
     path("csv/update-holdings/", UpdateHoldingsAPI.as_view(), name="csv_update_holdings"),
-
+    path("transactions/add/", TransactionFormAPI.as_view(), name="transactions_add"),
+    
     #Emails
     path("emails/fetch-stake/", FetchStakeEmailsAPI.as_view(), name="emails_fetch_stake"),
     path("emails/confirm-transaction/", ConfirmStakeTransactionAPI.as_view(), name="emails_confirm_transaction"),

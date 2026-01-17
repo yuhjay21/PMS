@@ -144,8 +144,8 @@ export default function TopBar() {
             </button>
             {profileMenuOpen && (
               <div
-                className="dropdown-menu dropdown-menu-end show"
-                style={{ minWidth: '220px' }}
+                className="dropdown-menu dropdown-menu-end show mt-1"
+                style={{ minWidth: '220px'}}
               >
                 <div class="dropdown-content">
                 {profileMenuItems.map((item) => (

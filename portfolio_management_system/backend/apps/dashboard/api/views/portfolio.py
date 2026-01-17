@@ -115,7 +115,7 @@ class DashboardHoldingsAPI(APIView):
         holding_companies = (
             StockHolding.objects
             .filter(portfolio__in=portfolios)
-            .values('company_symbol', 'company_name', 'Exchange', 'sector', 'id')
+            .values('company_symbol', 'company_name', 'Exchange', 'sector')
             .annotate(
                 total_shares=Sum('number_of_shares'),
                 total_investment=Sum('investment_amount'),
@@ -180,7 +180,7 @@ class DashboardHoldingsAPI(APIView):
             investment_amount = c['total_investment'] or 0
             total_cost = c['total_cost_sum'] or 0
             average_cost = c['weighted_avg_buy_price'] or 0
-            pk = c['id']
+            #pk = c['id']
 
             market_price = finite_or_zero(latest_prices.get(company_symbol, 0) or latest_prices.get(company_symbol+"."+exchange, 0) or 0)
             prev_market_price = finite_or_zero(yesterday_prices.get(company_symbol, 0) or yesterday_prices.get(company_symbol+"."+exchange, 0) or 0)
@@ -254,7 +254,7 @@ class DashboardHoldingsAPI(APIView):
                 "uPnL": ((market_price * number_shares) - total_cost),
                 'PnL': PnL,
                 'AverageCost': average_cost,
-                'id': pk,
+                #'id': pk,
             })
 
             sum_investment_amount += investment_amount
